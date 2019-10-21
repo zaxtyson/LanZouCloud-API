@@ -7,13 +7,13 @@
 
 # 更新说明
 - 修复了登录时 `formhash` 错误的问题
-- 解决了多次上传大文件被限制的问题   [#3](https://github.com/zaxtyson/LanZouCloud/issues/3)
+- 解决了多次上传大文件被限制的问题   [#3](https://github.com/zaxtyson/LanZouCloud-CMD/issues/3)
 - 细化 API 接口的功能，某些接口被取消、更名
 - 操作网盘时会进行检查，屏蔽蓝奏云不合理的设计
 - 支持批量上传/下载
-- 上传大文件不再直接将数据分段，改用 RAR 分卷压缩    [#2](https://github.com/zaxtyson/LanZouCloud/issues/2)
+- 上传大文件不再直接将数据分段，改用 RAR 分卷压缩    [#2](https://github.com/zaxtyson/LanZouCloud-CMD/issues/2)
 - 取消使用`种子文件`下载大文件，自动识别分卷压缩文件并解压
-- 上传/下载时支持使用回调函数显示进度  [#1](https://github.com/zaxtyson/LanZouCloud/issues/1)
+- 上传/下载时支持使用回调函数显示进度  [#1](https://github.com/zaxtyson/LanZouCloud-CMD/issues/1)
 - 不再向上抛异常，而是返回错误码
 
 # 简介
@@ -274,13 +274,14 @@ if code == LanZouCloud.SUCCESS:
 ```pydocstring
 # 显示上传进度条的回调函数
 def show_progress(file_name, total_size, now_size):
-    percent = now_size / total_size
-    bar_len = 40            # 进度条长总度
-    now_size /= 1048576     # Bytes to MB
-    total_size /= 1048576
-    bar_str = '>' * round(bar_len * percent) + '=' * round(bar_len * (1 - percent))
-    print('\r{:.2f}% [{}] {:.1f}/{:.1f}MB\t|\t{} '.format(
-        percent * 100, bar_str, now_size, total_size, file_name), end='')
+        """显示进度条的回调函数"""
+        percent = now_size / total_size
+        bar_len = 40  # 进度条长总度
+        bar_str = '>' * round(bar_len * percent) + '=' * round(bar_len * (1 - percent))
+        print('\r{:.2f}%\t[{}] {:.1f}/{:.1f}MB | {} '.format(
+            percent * 100, bar_str, now_size / 1048576, total_size / 1048576, file_name), end='')
+        if total_size == now_size:
+            print('')  # 下载完成换行
 
 code = lzy.upload_file(r"D:\test\DJ Okawari - Luv Letter.mp3", -1, show_progress)
 if code != LanZouCloud.SUCCESS:
@@ -328,7 +329,6 @@ if code != LanZouCloud.SUCCESS:
 
 返回值 : 是文件返回 `True`,否则返回 `False`
 
----
 ---
 ### `.is_folder_url(share_url)`
 > 判断分享链接是否为文件夹

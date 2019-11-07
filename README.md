@@ -1,11 +1,21 @@
-# 蓝奏云网盘API `2.0`
-> 基于Python3实现,最强的蓝奏云API~ 
+<p align="center">
+<img src="https://pc.woozooo.com/img/logo2.gif" width="200">
+</p>
 
-![](https://pc.woozooo.com/img/logo2.gif)  
+<h1 align="center">- 蓝奏云API -</h1>
+
+<p align="center">
+<img src="https://img.shields.io/github/v/release/zaxtyson/LanZouCloud-CMD.svg?logo=appveyor&color=brightgreen">
+<img src="https://img.shields.io/badge/support-Windows-blue?logo=Windows">
+<img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
+</p>
 
 ### [蓝奏云注册](https://pc.woozooo.com/account.php?action=register)
 
-# 更新说明
+# `v2.1` 更新说明
+- 修复了蓝奏云分享链接格式变化导致无法获取直链的问题
+
+# `v2.0` 更新说明
 - 修复了登录时 `formhash` 错误的问题
 - 解决了多次上传大文件被限制的问题   [#3](https://github.com/zaxtyson/LanZouCloud-CMD/issues/3)
 - 细化 API 接口的功能，某些接口被取消、更名

@@ -44,12 +44,12 @@ class LanZouCloud(object):
 
     def is_file_url(self, share_url):
         """判断是否为文件的分享链接"""
-        pat = 'https?://www.lanzous.com/i6[a-z0-9]{5}/?'
+        pat = 'https?://www.lanzous.com/i[a-z0-9]{6}/?'
         return True if re.fullmatch(pat, share_url) else False
 
     def is_folder_url(self, share_url):
         """判断是否为文件夹的分享链接"""
-        pat = 'https?://www.lanzous.com/b00[a-z0-9]{6}/?'
+        pat = 'https?://www.lanzous.com/b[a-z0-9]{8}/?'
         return True if re.fullmatch(pat, share_url) else False
 
     def set_rar_tool(self, bin_path):

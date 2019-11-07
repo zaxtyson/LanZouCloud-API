@@ -5,12 +5,10 @@
 <h1 align="center">- 蓝奏云API -</h1>
 
 <p align="center">
-<img src="https://img.shields.io/github/v/release/zaxtyson/LanZouCloud-CMD.svg?logo=appveyor&color=brightgreen">
+<img src="https://img.shields.io/badge/version-2.1-blue?logo=iCloud">
 <img src="https://img.shields.io/badge/support-Windows-blue?logo=Windows">
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 </p>
-
-### [蓝奏云注册](https://pc.woozooo.com/account.php?action=register)
 
 # `v2.1` 更新说明
 - 修复了蓝奏云分享链接格式变化导致无法获取直链的问题
@@ -34,6 +32,9 @@
 通过分卷上传，解决了单文件最大 100MB 的限制。同时增加了批量上传/下载的功能
 
 - 如果有任何问题或建议，欢迎提 issue。最后，求一个 star (≧∇≦)ﾉ
+
+# 注册蓝奏云
+ [蓝奏云注册](https://pc.woozooo.com/account.php?action=register)
 
 # 安装依赖库
 ```

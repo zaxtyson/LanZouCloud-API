@@ -209,7 +209,7 @@ class LanZouCloud(object):
             para = re.findall(r'<iframe.*?src="(.*?)".*?>', html)[1]  # 提取构造下载页面链接所需的参数
             file_name = re.findall(r'<div class="b">(.*?)</div>', html)[0]
             html = self._get(self._host_url + para).text
-            post_data = re.findall(r'data\s:\s(.*),', html)[0]  # {'action': 'downprocess', 'sign': 'xxxxx'}
+            post_data = re.findall(r'[^/]*data\s:\s(.*),', html)[0]  # {'action': 'downprocess', 'sign': 'xxxxx'}
             post_data = eval(post_data)
             link_info = self._post(self._host_url + '/ajaxm.php', post_data).json()
             link_info['inf'] = file_name  # 无提取码时 inf 字段为 0，有提取码时该字段为文件名

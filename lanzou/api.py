@@ -9,6 +9,8 @@ from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from urllib3 import disable_warnings
 from urllib3.exceptions import InsecureRequestWarning
 
+__all__ = ['LanZouCloud']
+
 # 调试日志设置
 logger = logging.getLogger('lanzou')
 logger.setLevel(logging.ERROR)
@@ -506,7 +508,7 @@ class LanZouCloud(object):
 
         first_rar = save_path + os.sep + file_list[0]
         if os.name == 'nt':
-            command = f'start /b "{self._rar_path}" -y e "{first_rar}" "{save_path}"'  # Windows 平台
+            command = f'start /b {self._rar_path} -y e "{first_rar}" "{save_path}"'  # Windows 平台
         else:
             command = f'{self._rar_path} -y e {first_rar} {save_path}'  # Linux 平台
         try:

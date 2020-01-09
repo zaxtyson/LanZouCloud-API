@@ -5,7 +5,7 @@ with open("README.md", "r", encoding='utf8') as fh:
 
 setuptools.setup(
     name="lanzou-api",
-    version="2.2.1",
+    version="2.2",  # 2.2.1 has been deleted on PyPI,and can't resumed.Fuck myself :(
     author="zaxtyson",
     author_email="zaxtyson@foxmail.com",
     description="LanZouCloud API",

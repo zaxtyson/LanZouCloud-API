@@ -8,6 +8,7 @@
 <img src="https://img.shields.io/badge/version-2.2.1-blue?logo=iCloud">
 <img src="https://img.shields.io/badge/support-Windows-blue?logo=Windows">
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
+<img src="https://github.com/zaxtyson/LanZouCloud-API/workflows/Publish%20to%20PyPI/badge.svg">
 </p>
 
 # 简介

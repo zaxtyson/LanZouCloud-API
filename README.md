@@ -5,10 +5,32 @@
 <h1 align="center">- 蓝奏云API -</h1>
 
 <p align="center">
-<img src="https://img.shields.io/badge/version-2.1-blue?logo=iCloud">
+<img src="https://img.shields.io/badge/version-2.2.1-blue?logo=iCloud">
 <img src="https://img.shields.io/badge/support-Windows-blue?logo=Windows">
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
+<img src="https://github.com/zaxtyson/LanZouCloud-API/workflows/Publish%20to%20PyPI/badge.svg">
 </p>
+
+# 简介
+
+- 本库封装了对蓝奏云的基本操作: 登录、列出文件、下载文件、上传文件、删除文件(夹)、
+清空回收站、恢复文件、创建文件夹、设置文件(夹)访问密码
+
+- 此外，还解决了蓝奏云的上传格式限制和单文件最大 100MB 的限制，同时增加了批量上传/下载的功能。
+
+- 如果有任何问题或建议，欢迎提 issue。
+- 最后，求一个 star (≧∇≦)ﾉ
+
+# `v2.2.1` 更新说明
+- API 发布到 PyPI ，直接使用 `pip install lanzou-api` 即可安装依赖
+ 
+# `v2.2` 更新说明
+- 修复了文件和文件夹 id 冲突的问题(导致部分 API 接口参数变化)
+- 修复了蓝奏云网页变化导致文件(夹)无法下载的问题 [#4](https://github.com/zaxtyson/LanZouCloud-CMD/issues/4)
+- 修复了上传 rar 分卷文件被 ban 的问题
+- 修复了无后缀文件上传出错的问题
+- 修复了文件中空白字符导致上传和解压失败的问题
+- 修复偶尔出现的 SSL 握手错误
 
 # `v2.1` 更新说明
 - 修复了蓝奏云分享链接格式变化导致无法获取直链的问题
@@ -24,29 +46,26 @@
 - 上传/下载时支持使用回调函数显示进度  [#1](https://github.com/zaxtyson/LanZouCloud-CMD/issues/1)
 - 不再向上抛异常，而是返回错误码
 
-# 简介
-
-- 本库封装了对蓝奏云的基本操作: 登录、列出文件、下载文件、上传文件、删除文件(夹)、
-清空回收站、恢复文件、创建文件夹、设置文件(夹)访问密码
-- 此外，通过伪装后缀名，解决了蓝奏云的上传格式限制。
-通过分卷上传，解决了单文件最大 100MB 的限制。同时增加了批量上传/下载的功能
-
-- 如果有任何问题或建议，欢迎提 issue。最后，求一个 star (≧∇≦)ﾉ
 
 # 注册蓝奏云
  [蓝奏云注册](https://pc.woozooo.com/account.php?action=register)
 
-# 安装依赖库
+# 安装依赖
 ```
-pip install requests requests_toolbelt
-```
-
-Windows 平台可使用项目文件中的 `rar.exe` 作为解压工具，Linux 平台需安装 `rar`
-
-```
-sudo apt install rar
+pip install lanzou-api
 ```
 
+# 设置压缩工具
+为了绕过蓝奏云对上传大文件的限制，本程序使用 RAR 分卷压缩的方式将大文件拆分成 100MB 的小块。
+
+所以，安装依赖后还需要下载解压工具:
+
+- Windows 平台下载项目文件中的 [`/tools/rar.exe`](https://github.com/zaxtyson/LanZouCloud-API/raw/master/tools/rar.exe)
+作为解压工具，将它放到你的项目中即可
+
+- Linux 平台使用 `sudo apt install rar` 安装解压工具，然后通过 `whereis rar` 查看可执行文件路径
+
+- 使用 `set_rar_tool()` 设置解压工具路径，详情参考 API 文档
 
 
 # API 文档
@@ -61,7 +80,7 @@ sudo apt install rar
 
 示例 : 
 ```pydocstring
-from api.lanzou import LanZouCloud
+from lanzou.api import LanZouCloud
 
 lzy = LanZouCloud()
 code = lzy.login('username', 'passwd')
@@ -204,12 +223,13 @@ print(full_path)
 
 ---
 
-### `.delete(fid)`  
+### `.delete(fid, is_file=True)`  
 > 把网盘的文件(夹)放到回收站
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件(夹)id|Y|-|
+|is_file|bool|是否为文件id|N|默认True|
 
 示例 : 
 ```pydocstring
@@ -560,12 +580,13 @@ print(deleted_files)
 
 ---
 
-### `.recovery(fid)`  
+### `.recovery(fid, is_file=True)`  
 > 从回收站恢复文件（夹）
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件(夹)id|Y|-|
+|is_file|bool|是否为文件id|N|默认True|
 
 示例 : 
 ```pydocstring
@@ -596,12 +617,13 @@ if code == LanZouCloud.SUCCESS:
 
 ---
 
-### `.get_share_info(fid)`  
+### `.get_share_info(fid, is_file=True)`  
 > 获取文件(夹)分享信息
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件(夹)id|Y|-|
+|is_file|bool|是否为文件id|N|默认True|
 
 示例 :
 ```pydocstring
@@ -627,13 +649,14 @@ if info['code'] == LanZouCloud.SUCCESS:
 
 ---
 
-### `.set_share_passwd(fid, passwd)`  
+### `.set_share_passwd(fid, passwd, is_file=True)`  
 > 设置文件(夹)分享密码
 
 |参数|类型|说明|必填|备注|  
 |:---:|:---:|:---:|:---:|:---:|
 |fid|int|文件(夹)id|Y|-|
 |passwd|str|分享密码|N|2-6个字符,默认空(无密码)|
+|is_file|bool|是否为文件id|N|默认True|
 
 示例 :
 ```pydocstring

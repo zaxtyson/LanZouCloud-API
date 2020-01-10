@@ -60,12 +60,12 @@ class LanZouCloud(object):
 
     def is_file_url(self, share_url):
         """判断是否为文件的分享链接"""
-        pat = 'https?://www.lanzous.com/i[a-z0-9]{6}/?'
+        pat = 'https?://www.lanzous.com/i[a-z0-9]{6,}/?'
         return True if re.fullmatch(pat, share_url) else False
 
     def is_folder_url(self, share_url):
         """判断是否为文件夹的分享链接"""
-        pat = 'https?://www.lanzous.com/b[a-z0-9]{8}/?'
+        pat = 'https?://www.lanzous.com/b[a-z0-9]{7,}/?'
         return True if re.fullmatch(pat, share_url) else False
 
     def _remove_notes(self, html):
@@ -533,27 +533,27 @@ class LanZouCloud(object):
         if '请输入密码' in html:
             if len(dir_pwd) == 0:
                 return LanZouCloud.LACK_PASSWORD
-            lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
-            t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
-            k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
-            fid = re.findall(r"'fid':'?(\d+)'?,", html)[0]
-            post_data = {'lx': lx, 'pg': 1, 'k': k, 't': t, 'fid': fid, 'pwd': dir_pwd}
-            try:
-                # 这里不用封装好的post函数是为了支持未登录的用户通过 URL 下载
-                r = requests.post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
-            except requests.RequestException:
-                return LanZouCloud.FAILED
-            if r['zt'] == 3:
-                return LanZouCloud.PASSWORD_ERROR
-            elif r['zt'] != 1:
-                return LanZouCloud.FAILED
-            # 获取文件信息成功后...
-            info = {f['name_all']: self._host_url + '/' + f['id'] for f in r['text']}
-            file_list = list(info.keys())
-            url_list = [info.get(key) for key in sorted(info.keys())]
-            for url in url_list:
-                self.download_file(url, '', save_path, call_back)
-            return self._unrar(file_list, save_path)
+        lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
+        t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
+        k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
+        fid = re.findall(r"'fid':'?(\d+)'?,", html)[0]
+        post_data = {'lx': lx, 'pg': 1, 'k': k, 't': t, 'fid': fid, 'pwd': dir_pwd}
+        try:
+            # 这里不用封装好的post函数是为了支持未登录的用户通过 URL 下载
+            r = requests.post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
+        except requests.RequestException:
+            return LanZouCloud.FAILED
+        if r['zt'] == 3:
+            return LanZouCloud.PASSWORD_ERROR
+        elif r['zt'] != 1:
+            return LanZouCloud.FAILED
+        # 获取文件信息成功后...
+        info = {f['name_all']: self._host_url + '/' + f['id'] for f in r['text']}
+        file_list = list(info.keys())
+        url_list = [info.get(key) for key in sorted(info.keys())]
+        for url in url_list:
+            self.download_file(url, '', save_path, call_back)
+        return self._unrar(file_list, save_path)
 
     def download_dir2(self, fid, save_path='./down', call_back=None):
         """登录用户通过id下载文件夹"""

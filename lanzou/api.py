@@ -204,6 +204,17 @@ class LanZouCloud(object):
         info = {i['name']: i['id'] for i in self.get_dir_list(folder_id).values()}
         return {key: info.get(key) for key in sorted(info.keys())}
 
+    def get_all_folders_list(self, file_id=-1):
+        """用于移动文件至新的文件夹"""
+        try:
+            res = self._post(self._doupload_url, data={"task": 19, "file_id": file_id}).json()
+            if res['zt'] == 1:
+                return res['info']  # [{'folder_name': 'name', 'folder_id': 'id'}, ...]
+            else:
+                return []  # 空
+        except requests.RequestException:
+            return []
+
     def get_full_path(self, folder_id=-1):
         """获取文件夹完整路径"""
         path_list = {'LanZouCloud': -1}

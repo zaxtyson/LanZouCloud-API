@@ -589,3 +589,103 @@ class LanZouCloud(object):
             if code == LanZouCloud.FAILED:
                 return LanZouCloud.FAILED
         return self._unrar(list(file_list.keys()), save_path)
+
+    def get_shared_file_url_info(self, share_url, pwd=""):
+        """获取 文件 分享链接的详细信息"""
+        infos = {}
+        if not self.is_file_url(share_url):
+            return {"code": LanZouCloud.URL_INVALID, "info": infos}
+        html = self._get(share_url).text
+        if "文件取消" in html:
+            return {"code": LanZouCloud.FILE_CANCELLED, "info": infos}
+        if "输入密码" in html:  # 文件设置了提取码时
+            if len(pwd) == 0:
+                return {"code": LanZouCloud.LACK_PASSWORD, "info": infos}
+            html = self._remove_notes(html)  # 如果没有给提取码就先不做无用功
+            post_str = re.findall(r"[^/]data\s:\s'(.*)'", html)[0] + str(pwd)
+            f_size = re.findall(r'class="n_filesize">[^<]*([\.0-9 MKBmkbGg]+)<div', html)[0]
+            f_time = re.findall(r'class="n_file_infos">([-0-9]+)<div', html)[0]
+            f_desc = re.findall(r'class="n_box_des">(.*)<div', html)[0]
+            # action=downprocess&sign=xxxxx&p=pwd
+            post_data = {}
+            for i in post_str.split("&"):  # 转换成 dict
+                k, v = i.split("=")
+                post_data[k] = v
+            link_info = self._post(self._host_url + "/ajaxm.php", post_data).json()
+            if link_info["zt"] == 1:
+                infos[link_info["inf"]] = {
+                    'name': link_info["inf"],
+                    'time': f_time,  # 上传时间
+                    'size': f_size,  # 文件大小
+                    'pwd': pwd,      # 提取码
+                    'des': f_desc,   # 描述
+                    'share_url': share_url
+                }
+                return {"code": LanZouCloud.SUCCESS, "info": infos}
+            else:
+                return {"code": LanZouCloud.PASSWORD_ERROR, "info": infos}
+        else:
+            html = self._remove_notes(html)
+            f_name = re.findall(r'<div style="[^"]+">([^><]*?)</div>', html)
+            if f_name:
+                f_name = f_name[0]
+            else:
+                f_name = re.findall(r"var filename = '(.*)';", html)[0]
+            f_size = re.findall(r'文件大小：</span>([\.0-9 MKBmkbGg]+)<br', html)[0]
+            f_time = re.findall(r'上传时间：</span>([-0-9 月天小时分钟秒前]+)<br', html)[0]
+            f_desc = re.findall(r'文件描述：</span><br>([^<]+)</td>', html)[0].strip()
+            infos[f_name] = {
+                'name': f_name,
+                'time': f_time,  # 上传时间
+                'size': f_size,  # 文件大小
+                'pwd': pwd,      # 提取码
+                'des': f_desc,   # 描述
+                'share_url': share_url
+            }
+            return {"code": LanZouCloud.SUCCESS, "info": infos}
+
+    def get_shared_folder_url_info(self, share_url, dir_pwd=""):
+        """获取 文件夹 分享链接的详细信息"""
+        infos = {}
+        if self.is_file_url(share_url):
+            return {"code": LanZouCloud.URL_INVALID, "info": infos}
+        html = requests.get(share_url, headers=self._headers).text
+        if "文件不存在" in html:
+            return {"code": LanZouCloud.FILE_CANCELLED, "info": infos}
+        html = self._remove_notes(html)
+        lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
+        t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
+        k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
+        fid = re.findall(r"'fid':'?(\d+)'?,", html)[0]
+        desc = re.findall(r'id="filename">([^<]+)</span', html)
+        if desc:
+            desc = str(desc[0])
+        else:
+            desc = ""
+        if "请输入密码" in html:
+            if len(dir_pwd) == 0:
+                return {"code": LanZouCloud.LACK_PASSWORD, "info": infos}
+            post_data = {"lx": lx, "pg": 1, "k": k, "t": t, "fid": fid, "pwd": dir_pwd}
+        else:
+            post_data = {"lx": lx, "pg": 1, "k": k, "t": t, "fid": fid}
+        try:
+            # 不用封装好的post函数以支持未登录的用户通过 URL 获取信息
+            r = requests.post(self._host_url + "/filemoreajax.php", data=post_data, headers=self._headers).json()
+        except requests.RequestException:
+            return {"code": LanZouCloud.FAILED, "info": infos}
+        if r["zt"] == 3:
+            return {"code": LanZouCloud.PASSWORD_ERROR, "info": infos}
+        elif r["zt"] == 1:
+            # 获取文件信息成功
+            for f in r["text"]:
+                infos[f["name_all"]] = {
+                    'name': f["name_all"],
+                    'time': f["time"],  # 上传时间
+                    'size': f["size"],  # 文件大小
+                    'pwd': dir_pwd,     # 文件夹的提取码
+                    'des': desc,        # 文件夹的描述
+                    'share_url': self._host_url + "/" + f["id"]
+                }
+            return {"code": LanZouCloud.SUCCESS, "info": infos}
+        else:
+            return {"code": LanZouCloud.FAILED, "info": infos}

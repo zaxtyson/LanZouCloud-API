@@ -182,15 +182,27 @@ class LanZouCloud(object):
         return {key: info.get(key) for key in sorted(info.keys())}
 
     def get_dir_list(self, folder_id=-1):
-        """获取子文件夹列表"""
-        folder_list = {}
+        """获取子文件夹信息信息列表"""
         try:
+            folder_list = {}
             url = self._mydisk_url + '?item=files&action=index&folder_node=1&folder_id=' + str(folder_id)
-            for k, v in re.findall(r'&nbsp;(.+?)</a>&nbsp;.+folkey\((.+?)\)', self._session.get(url).text):
-                folder_list[k.replace('&amp;', '&')] = int(v)  # 文件夹名 : id
+            html = self._session.get(url).text
+            info = re.findall(r'&nbsp;(.+?)</a>&nbsp;.+"folk(\d+)"(.*?)>.+#BBBBBB">\[?(.*?)\.+\]?</font>', html)
+            for folder_name, fid, pwd_flag, desc in info:
+                folder_list[folder_name] = {
+                    "id": int(fid),
+                    "name": folder_name.replace('&amp;', '&'),  # 修复网页中的 &amp; 为 &
+                    "has_pwd": True if pwd_flag else False,      # 有密码时 pwd_flag 值为 style="display:initial"
+                    "desc": desc    # 文件夹描述
+                }
             return folder_list
         except requests.RequestException:
             return {}
+
+    def get_dir_list2(self, folder_id=-1):
+        """获取文件夹-id列表"""
+        info = {i['name']: i['id'] for i in self.get_dir_list(folder_id).values()}
+        return {key: info.get(key) for key in sorted(info.keys())}
 
     def get_full_path(self, folder_id=-1):
         """获取文件夹完整路径"""

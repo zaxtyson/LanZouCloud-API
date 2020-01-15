@@ -5,7 +5,7 @@
 <h1 align="center">- 蓝奏云API -</h1>
 
 <p align="center">
-<img src="https://img.shields.io/badge/version-2.2.1-blue?logo=iCloud">
+<img src="https://img.shields.io/badge/version-2.3.0-blue?logo=iCloud">
 <img src="https://img.shields.io/badge/support-Windows-blue?logo=Windows">
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 <img src="https://github.com/zaxtyson/LanZouCloud-API/workflows/Publish%20to%20PyPI/badge.svg">
@@ -21,9 +21,48 @@
 - 如果有任何问题或建议，欢迎提 issue。
 - 最后，求一个 star (≧∇≦)ﾉ
 
+# API 文档
+ API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
+
+# `2.3.0` 更新说明
+- 重新封装了 `_get()`、`_post()`方法，防止弱网环境炸出一堆网络异常导致程序崩溃
+
+- 文件的上传时间统一为 `%Y-%m-d` 格式，不再使用蓝奏云显示的 `N小时前`、`N天前`、`前天` 之类词语
+
+- 变更的函数
+    - `get_dir_list()` 返回的信息增多，格式 `dict` -> `list`
+    - `get_file_list()` 返回的信息增多，格式 `dict` -> `list`
+    - `get_share_info()` 返回的信息增多
+    - `list_recovery()` 被移除
+    - `rename_dir()` 功能减少，仅用作重命名文件夹
+
+ - 更名的函数
+    - `get_file_list2()` -> `get_file_id_list()`
+    - `get_dir_list2()` -> `get_dir_id_list()`
+    - `get_direct_url()` -> `get_durl_by_url()`
+    - `get_direct_url2()` -> `get_durl_by_id()`
+    - `download_file()` -> `down_file_by_url()`
+    - `download_file2()` -> `down_file_by_id()`
+    - `set_share_passwd()` -> `set_passwd()`
+    - `clean_recovery()` -> `clean_rec()`
+
+- 新增的函数
+    - `get_rec_dir_list()` 获取回收站文件夹信息列表
+    - `get_rec_file_list()` 获取回收站文件信息列表
+    - `get_rec_all()` 获取整理后的回收站全部信息
+    - `delete_rec()` 彻底删除回收站文件(夹)
+    - `get_folder_id_list()` 获取全部文件夹 id 列表
+    - `get_folder_info_by_url()` 获取文件夹及其文件信息
+    - `get_folder_info_by_id()` 获取文件夹及其文件信息
+    - `get_file_info_by_url()` 获取文件信息
+    - `get_file_info_by_id()` 获取文件信息
+    - `set_desc()` 设置文件(夹)描述信息
+    
+- 本次更新内容较多，其它诸多细节不再列举，具体变更请查看 wiki 页的 API 文档
+
 # `v2.2.2` 更新说明
-- 修复下载无提取码文件夹失败的问题
-- 修复文件夹、文件链接判断不全的问题
+- 修复无提取码文件夹无法下载的问题
+- 修复文件夹、文件链接判断不完整的问题
 - `get_dir_list()` 函数返回文件夹详细信息
 - `get_dir_list2()` 函数返回文件夹"name-id"列表
 - 文档转至 wiki 页面
@@ -52,5 +91,3 @@
 - 取消使用`种子文件`下载大文件，自动识别分卷压缩文件并解压
 - 上传/下载时支持使用回调函数显示进度  [#1](https://github.com/zaxtyson/LanZouCloud-CMD/issues/1)
 - 不再向上抛异常，而是返回错误码
-
-# API 文档请查看 wiki

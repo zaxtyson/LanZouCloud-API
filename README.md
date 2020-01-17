@@ -24,6 +24,12 @@
 # API 文档
  API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
+# `2.3.1` 更新说明
+- 开放了对 `is_file_url()` 和 `is_folder_url()` 两个函数的调用
+- 修复了文件夹深度达到 4 层时 `get_full_path()` 报错的问题
+- `mkdir()` 创建文件夹时会检查是否有同名文件夹，有的话加上 `_` 后缀
+- `get_folder_id_list()` 返回的文件夹中加入了根目录信息 `{LanZouCloud: -1}` 
+
 # `2.3.0` 更新说明
 - 重新封装了 `_get()`、`_post()`方法，防止弱网环境炸出一堆网络异常导致程序崩溃
 

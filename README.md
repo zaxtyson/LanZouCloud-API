@@ -5,7 +5,7 @@
 <h1 align="center">- 蓝奏云API -</h1>
 
 <p align="center">
-<img src="https://img.shields.io/badge/version-2.3.0-blue?logo=iCloud">
+<img src="https://img.shields.io/github/v/release/zaxtyson/LanZouCloud-API.svg?logo=iCloud">
 <img src="https://img.shields.io/badge/support-Windows-blue?logo=Windows">
 <img src="https://img.shields.io/badge/support-Linux-yellow?logo=Linux">
 <img src="https://github.com/zaxtyson/LanZouCloud-API/workflows/Publish%20to%20PyPI/badge.svg">
@@ -23,6 +23,11 @@
 
 # API 文档
  API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
+
+# `2.3.2` 更新说明
+- 修复了文件无法上传的 Bug
+- 解除了官方对文件名包含多个后缀的限制
+- 允许使用 cookie 登录
 
 # `2.3.1` 更新说明
 - 开放了对 `is_file_url()` 和 `is_folder_url()` 两个函数的调用

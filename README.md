@@ -24,6 +24,9 @@
 # API 文档
  API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
+# `2.3.3` 更新说明
+- 修复上传超过 1GB 的文件时，前 10 个分卷丢失的 Bug [#7](https://github.com/zaxtyson/LanZouCloud-CMD/issues/7)
+
 # `2.3.2` 更新说明
 - 修复了文件无法上传的 Bug
 - 解除了官方对文件名包含多个后缀的限制

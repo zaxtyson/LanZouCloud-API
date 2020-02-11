@@ -673,10 +673,9 @@ class LanZouCloud(object):
         if not self._rar_path:
             return {'code': LanZouCloud.ZIP_ERROR, 'failed': None}
         rar_level = 0  # 压缩等级(0-5)，0 不压缩, 5 最好压缩(耗时长)
-        part_sum = os.path.getsize(file_path) // (self._max_size * 1048576) + 1
         file_name = file_path.split(os.sep)[-1].split('.')  # 文件名去掉无后缀，用作分卷文件的名字
         file_name = file_name[0] if len(file_name) == 1 else '.'.join(file_name[:-1])  # 处理没有后缀的文件
-        file_list = [f"{file_name}.part{i}.rar" for i in range(1, part_sum + 1)]
+        file_list = [f for f in os.listdir('./tmp') if f.startswith(file_name)]
         if not os.path.exists('./tmp'):
             os.mkdir('./tmp')  # 本地保存分卷文件的临时文件夹
         # 使用压缩工具分卷压缩大文件

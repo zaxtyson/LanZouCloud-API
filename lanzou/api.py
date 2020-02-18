@@ -78,9 +78,9 @@ class LanZouCloud(object):
         return re.sub(r'<!--.+?-->|\s+//\s*.+', '', html)
 
     @staticmethod
-    def _name_format(name):
+    def _name_format(name: str) -> str:
         """去除文件(夹)非法字符"""
-        return re.sub(r'[#$%^!*<>)(+=`\'\"/:;,?]', '', name)  # 去除非法字符（#也去掉,给程序混淆后缀使用）
+        return re.sub(r'[#$%^!*<>)(+=`\'\"/:;,?]', '', str(name))  # 去除非法字符（#也去掉,给程序混淆后缀使用）
 
     @staticmethod
     def _time_format(time_str) -> str:
@@ -119,6 +119,7 @@ class LanZouCloud(object):
 
     def _get_right_name(self, filename) -> (str, str):
         """解除混淆，返回正确文件名和格式"""
+        filename = filename.replace(u'\xa0', ' ').replace(u'\u3000', ' ')  # 有时网页端获取的文件名包含其它字符集的空白符
         fn_list = filename.replace('#', '.').split('.')
         suffix, sub_suffix = fn_list[-1], fn_list[-2]
 
@@ -171,7 +172,10 @@ class LanZouCloud(object):
         html = self._get(self._account_url)
         if not html:
             return LanZouCloud.NETWORK_ERROR
-        login_data['formhash'] = re.findall(r'name="formhash" value="(.+?)"', html.text)[0]
+        formhash = re.findall(r'name="formhash" value="(.+?)"', html.text)
+        if not formhash:
+            return LanZouCloud.FAILED
+        login_data['formhash'] = formhash[0]
         html = self._post(self._account_url, login_data)
         if not html:
             return LanZouCloud.NETWORK_ERROR
@@ -191,7 +195,7 @@ class LanZouCloud(object):
         html = self._get(self._account_url)
         if not html:
             return LanZouCloud.NETWORK_ERROR
-        return LanZouCloud.SUCCESS if '网盘用户登录' in html.text else LanZouCloud.FAILED
+        return LanZouCloud.FAILED if '网盘用户登录' in html.text else LanZouCloud.SUCCESS
 
     def logout(self) -> int:
         """注销"""
@@ -643,6 +647,9 @@ class LanZouCloud(object):
 
     def move_folder(self, folder_id, parent_folder_id=-1) -> int:
         """移动文件夹(官方并没有直接支持此功能)"""
+        if folder_id == parent_folder_id:
+            return LanZouCloud.FAILED   # 禁止移动文件夹到自身,后果是文件夹被删除
+
         folder_name = self.get_folders_id_name().get(folder_id)
 
         if not folder_name or folder_id < 0:

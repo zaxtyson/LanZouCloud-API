@@ -32,7 +32,7 @@
 - 修复了函数 `get_rec_all()` 在某些情况下崩溃的问题
 - 函数 `get_folder_id_list()` 重命名为 `get_folders_name_id()`
 - 新增函数 `get_folders_id_name()` 以应对用户手动创建同名文件夹带来的问题
-- 上传时不再自动删除文件名中空格
+- 上传时不再自动删除文件名中空格, 自动转换 `\xa0`，`\u3000` 为英文空格
 
 # `2.3.3` 更新说明
 - 修复上传超过 1GB 的文件时，前 10 个分卷丢失的 Bug [#7](https://github.com/zaxtyson/LanZouCloud-CMD/issues/7)

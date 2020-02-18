@@ -938,11 +938,17 @@ class LanZouCloud(object):
             return {'code': info['code'], 'folder': {}, 'files': []}
         return self.get_folder_info_by_url(info['url'], info['pwd'])
 
-    def down_dir_by_url(self, share_url, dir_pwd='', save_path='./down', call_back=None) -> dict:
+    def down_dir_by_url(self, share_url, dir_pwd='', save_path='./Download', call_back=None, mkdir=True) -> dict:
         """通过分享链接下载文件夹"""
         files = self.get_folder_info_by_url(share_url, dir_pwd)
         if files['code'] != LanZouCloud.SUCCESS:  # 获取文件信息失败
             return {'code': files['code'], 'failed': None}
+
+        if mkdir:   # 自动创建子文件夹
+            save_path = save_path + os.sep + files['folder']['name']
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+
         files = {f['name']: f['url'] for f in files['files']}  # { "name": "share_url", ...}
         info = sorted(files.items(), key=lambda x: x[0])  # info = [(name, url),(name, url),...] 已排序
         # 开始批量下载操作
@@ -967,11 +973,20 @@ class LanZouCloud(object):
             return {'code': LanZouCloud.ZIP_ERROR, 'failed': []}  # 解压时发生错误
         return result
 
-    def down_dir_by_id(self, fid, save_path='./down', call_back=None) -> dict:
+    def down_dir_by_id(self, fid, save_path='./Download', call_back=None, mkdir=True) -> dict:
         """登录用户通过id下载文件夹"""
         file_list = self.get_file_id_list(fid)
         if len(file_list) == 0:
             return {'code': LanZouCloud.FAILED, 'failed': []}
+
+        if mkdir:  # 自动创建子目录
+            folder_info = self.get_share_info(fid, False)
+            if folder_info['code'] != LanZouCloud.SUCCESS:
+                return {'code': LanZouCloud.FAILED, 'failed': []}
+            save_path = save_path + os.sep + folder_info['name']
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+
         result = {'code': LanZouCloud.SUCCESS, 'failed': []}
         for name, fid in file_list.items():
             code = self.down_file_by_id(fid, save_path, call_back)

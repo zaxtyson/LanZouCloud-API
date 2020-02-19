@@ -565,7 +565,8 @@ class LanZouCloud(object):
 
     def mkdir(self, parent_id, folder_name, desc='') -> int:
         """创建文件夹(同时设置描述)"""
-        folder_name = LanZouCloud._name_format(folder_name)
+        folder_name = folder_name.replace(' ', '_')     # 文件夹名称不能包含空格
+        folder_name = LanZouCloud._name_format(folder_name)     # 去除非法字符
         folder_list = self.get_dir_id_list(parent_id)
         if folder_name in folder_list.keys():  # 如果文件夹已经存在，直接返回 id
             return folder_list.get(folder_name)

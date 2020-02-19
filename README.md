@@ -19,10 +19,13 @@
 - 此外，还解决了蓝奏云的上传格式限制和单文件最大 100MB 的限制，同时增加了批量上传/下载的功能。
 
 - 如果有任何问题或建议，欢迎提 issue。
+
 - 最后，求一个 star (≧∇≦)ﾉ
 
 # API 文档
- API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
+- `dev` 分支用于修复错误，待稳定后再推到 `master` 分支
+- `master` 分支将自动发布到 PyPI
+- API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # `2.3.4` 更新说明
 - 修复了官方对 `.wtf[0-9]+.rar` 分卷后缀限制 [#11](https://github.com/zaxtyson/LanZouCloud-CMD/issues/11) [#12](https://github.com/zaxtyson/LanZouCloud-CMD/issues/12)

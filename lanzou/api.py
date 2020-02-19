@@ -41,7 +41,7 @@ class LanZouCloud(object):
         self._guise_suffix = 'dll'  # 不支持的文件伪装后缀
         self._fake_file_prefix = '__fake__'  # 假文件前缀
         self._rar_part_name = ''.join(sample('abcdefghijklmnopqrstuvwxyz', 5))
-        self._timeout = 2000  # 每个请求的超时 ms(不包含下载响应体的用时)
+        self._timeout = 5  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
         self._rar_path = None  # 解压工具路径
         self._host_url = 'https://www.lanzous.com'
@@ -58,15 +58,16 @@ class LanZouCloud(object):
 
     def _get(self, url, **kwargs):
         try:
-            return self._session.get(url, headers=self._headers, verify=False, timeout=self._timeout, **kwargs)
+            kwargs.setdefault('timeout', self._timeout)
+            return self._session.get(url, headers=self._headers, verify=False, **kwargs)
         except (ConnectionError, requests.RequestException):
             return None
 
     def _post(self, url, data, **kwargs):
         try:
-            if 'headers' in kwargs.keys():  # 上传文件需要重新设置 headers，防止重复冲突
-                return self._session.post(url, data, verify=False, timeout=self._timeout, **kwargs)
-            return self._session.post(url, data, headers=self._headers, verify=False, timeout=self._timeout, **kwargs)
+            kwargs.setdefault('timeout', self._timeout)
+            kwargs.setdefault('headers', self._headers)
+            return self._session.post(url, data, verify=False, **kwargs)
         except (ConnectionError, requests.RequestException):
             return None
 
@@ -714,7 +715,7 @@ class LanZouCloud(object):
                     self._upload_finished_flag = True
 
         monitor = MultipartEncoderMonitor(post_data, _call_back)
-        result = self._post('https://pc.woozooo.com/fileup.php', data=monitor, headers=tmp_header)
+        result = self._post('https://pc.woozooo.com/fileup.php', data=monitor, headers=tmp_header, timeout=3600)
         if not result:  # 网络异常
             return LanZouCloud.NETWORK_ERROR
         else:

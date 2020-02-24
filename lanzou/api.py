@@ -259,25 +259,23 @@ class LanZouCloud(object):
                 return []
             html = LanZouCloud._remove_notes(html.text)
             files = re.findall(
-                r'fl_sel_ids[^\n]+value="(\d+)".+?filetype/(\w+)\.gif.+?/>\s?(.+?)</a>.+?<td.+?>([\d\-]+?)</td>',
+                r'fl_sel_ids[^\n]+value="(\d+)".+?filetype/(\w+)\.gif.+?/>\s?(.+?)(?:\.{3})?</a>.+?<td.+?>([\d\-]+?)</td>',
                 html, re.DOTALL)
             all_file_list = []
             file_name_list = []
             counter = 1
-            for fid, ftype, name, time in files:
-                if name.endswith("..."):
-                    name = name[:-3]
+            for fid, ftype, name, time in sorted(files, key=lambda x: x[2]):
+                if not name.endswith(ftype):  # 防止文件名太长导致丢失了文件后缀
+                    name = name + '.' + ftype
+                name, ftype = self._get_right_name(name)
+
                 if name in file_name_list:  # 防止长文件名前 17:34 个字符相同重名
                     counter += 1
                     name = f'{name}({counter})'
                 else:
                     counter = 1
-                file_name_list.append(name)
+                    file_name_list.append(name)
 
-                if not name.endswith(ftype):  # 防止文件名太长导致丢失了文件后缀
-                    name = name + '.' + ftype
-
-                name, ftype = self._get_right_name(name)
                 all_file_list.append({'name': name, 'id': int(fid), 'time': time, 'type': ftype})
             return all_file_list
         else:  # 列出回收站中文件夹内的文件,信息只有部分文件名和文件大小
@@ -287,12 +285,12 @@ class LanZouCloud(object):
                 return []
             html = LanZouCloud._remove_notes(html.text)
             files = re.findall(
-                r'com/(\d+?)".+?filetype/(\w+)\.gif.+?/>&nbsp;(.+?)\.{0,3}</a> <font color="#CCCCCC">\((.+?)\)</font>',
+                r'com/(\d+?)".+?filetype/(\w+)\.gif.+?/>&nbsp;(.+?)(?:\.{3})?</a> <font color="#CCCCCC">\((.+?)\)</font>',
                 html)
             all_file_list = []
             file_name_list = []
             counter = 1
-            for fid, ftype, name, size in files:
+            for fid, ftype, name, size in sorted(files, key=lambda x: x[2]):
                 if not name.endswith(ftype):    # 防止文件名太长丢失后缀
                     name = name + '.' + ftype
                 name, ftype = self._get_right_name(name)
@@ -301,7 +299,7 @@ class LanZouCloud(object):
                     name = f'{name}({counter})'     # 防止文件名太长且前17个字符重复
                 else:
                     counter = 1
-                file_name_list.append(name)
+                    file_name_list.append(name)
                 all_file_list.append({'name': name, 'id': int(fid), 'size': size, 'type': ftype})
             return all_file_list
 

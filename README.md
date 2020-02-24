@@ -30,6 +30,7 @@
 # `2.3.5` 更新说明
 - 修复发送请求时 `timeout` 无效的问题 [#7](https://github.com/zaxtyson/LanZouCloud-API/issues/7)
 - 修复回收站文件夹中文件名过长，导致后缀丢失，程序闪退的问题 [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14)
+- 修复回收站存在多个文件重复时，序号添加不合理的问题
 - 修复官方启用滑动验证导致无法登录的问题 [#15](https://github.com/zaxtyson/LanZouCloud-CMD/issues/15)
 
 # `2.3.4` 更新说明

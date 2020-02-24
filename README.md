@@ -27,6 +27,11 @@
 - `master` 分支将自动发布到 PyPI
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
+# `2.3.5 dev` 更新说明
+- 修复发送请求时 `timeout` 无效的问题 [#7](https://github.com/zaxtyson/LanZouCloud-API/issues/7)
+- 修复回收站文件夹中文件名过长，导致后缀丢失，程序闪退的问题 [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14)
+- 修复官方启用滑动验证导致无法登录的问题 [#15](https://github.com/zaxtyson/LanZouCloud-CMD/issues/15)
+
 # `2.3.4` 更新说明
 - 修复了官方对 `.wtf[0-9]+.rar` 分卷后缀限制 [#11](https://github.com/zaxtyson/LanZouCloud-CMD/issues/11) [#12](https://github.com/zaxtyson/LanZouCloud-CMD/issues/12)
 - 新增函数 `move_folder()` 支持移动文件夹
@@ -38,7 +43,6 @@
 - 上传时不再自动删除文件名中空格, 自动转换 `\xa0`，`\u3000` 为英文空格
 - 函数 `down_dir_by_url()` 、 `down_dir_by_id()` 增加参数 `mkdir=True`, 下载时自动创建子文件夹
 - 修复文件日期错误 [#8](https://github.com/zaxtyson/LanZouCloud-CMD/issues/8)
-- 修复发送请求时 `timeout` 设置错误 [#7](https://github.com/zaxtyson/LanZouCloud-API/issues/7)
 
 # `2.3.3` 更新说明
 - 修复上传超过 1GB 的文件时，前 10 个分卷丢失的 Bug [#7](https://github.com/zaxtyson/LanZouCloud-CMD/issues/7)

@@ -59,7 +59,8 @@ class LanZouCloud(object):
     def _get(self, url, **kwargs):
         try:
             kwargs.setdefault('timeout', self._timeout)
-            return self._session.get(url, headers=self._headers, verify=False, **kwargs)
+            kwargs.setdefault('headers', self._headers)
+            return self._session.get(url, verify=False, **kwargs)
         except (ConnectionError, requests.RequestException):
             return None
 
@@ -169,7 +170,10 @@ class LanZouCloud(object):
 
     def login(self, username, passwd) -> int:
         """登录蓝奏云控制台"""
-        login_data = {"action": "login", "task": "login", "username": username, "password": passwd}
+        login_data = {"action": "login", "task": "login", "setSessionId": "", "setToken": "", "setSig": "",
+                      "setScene": "", "username": username, "password": passwd}
+        phone_header = {
+            "User-Agent": "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/82.0.4051.0 Mobile Safari/537.36"}
         html = self._get(self._account_url)
         if not html:
             return LanZouCloud.NETWORK_ERROR
@@ -177,7 +181,7 @@ class LanZouCloud(object):
         if not formhash:
             return LanZouCloud.FAILED
         login_data['formhash'] = formhash[0]
-        html = self._post(self._account_url, login_data)
+        html = self._post(self._account_url, login_data, headers=phone_header)
         if not html:
             return LanZouCloud.NETWORK_ERROR
         if '登录成功' in html.text:
@@ -186,11 +190,11 @@ class LanZouCloud(object):
         else:
             return LanZouCloud.FAILED
 
-    def get_cookie(self):
+    def get_cookie(self) -> dict:
         """获取用户 Cookie"""
         return self._cookies
 
-    def login_by_cookie(self, cookie: dict):
+    def login_by_cookie(self, cookie: dict) -> int:
         """通过cookie登录"""
         self._session.cookies.update(cookie)
         html = self._get(self._account_url)
@@ -233,11 +237,11 @@ class LanZouCloud(object):
             return []
         dirs = re.findall(r'folder_id=(\d+).+?>&nbsp;(.+?)\.{0,3}</a>.*\n+.*<td.+?>(.+?)</td>.*\n.*<td.+?>(.+?)</td>',
                           html.text)
-        all_dir_list = []   # 文件夹信息列表
+        all_dir_list = []  # 文件夹信息列表
         dir_name_list = []  # 文件夹名列表d
-        counter = 1     # 重复计数器
+        counter = 1  # 重复计数器
         for fid, name, size, time in dirs:
-            if name in dir_name_list:   # 文件夹名前 17 个中文或 34 个英文重复
+            if name in dir_name_list:  # 文件夹名前 17 个中文或 34 个英文重复
                 counter += 1
                 name = f'{name}({counter})'
             else:
@@ -270,7 +274,7 @@ class LanZouCloud(object):
                     counter = 1
                 file_name_list.append(name)
 
-                if not name.endswith(ftype):    # 防止文件名太长导致丢失了文件后缀
+                if not name.endswith(ftype):  # 防止文件名太长导致丢失了文件后缀
                     name = name + '.' + ftype
 
                 name, ftype = self._get_right_name(name)
@@ -289,15 +293,15 @@ class LanZouCloud(object):
             file_name_list = []
             counter = 1
             for fid, ftype, name, size in files:
+                if not name.endswith(ftype):    # 防止文件名太长丢失后缀
+                    name = name + '.' + ftype
                 name, ftype = self._get_right_name(name)
                 if name in file_name_list:
                     counter += 1
-                    name = f'{name}({counter})'
+                    name = f'{name}({counter})'     # 防止文件名太长且前17个字符重复
                 else:
                     counter = 1
                 file_name_list.append(name)
-                if not name.endswith(ftype):
-                    name = name + '.' + ftype
                 all_file_list.append({'name': name, 'id': int(fid), 'size': size, 'type': ftype})
             return all_file_list
 
@@ -308,18 +312,19 @@ class LanZouCloud(object):
         need_pop_from_root = []
         all_sub_folders = []  # 保存整理后的文件夹列表
         for folder in self.get_rec_dir_list():  # 遍历所有子文件夹
-            this_folder = {'name': folder['name'], 'id': folder['id'], 'time': folder['time'], 'size': folder['size'], 'files': []}
-            for file in self.get_rec_file_list(folder['id']):   # 文件夹内的文件属性: name,id,type,size
+            this_folder = {'name': folder['name'], 'id': folder['id'], 'time': folder['time'], 'size': folder['size'],
+                           'files': []}
+            for file in self.get_rec_file_list(folder['id']):  # 文件夹内的文件属性: name,id,type,size
                 if file['name'] in root_file_name_list.keys():  # 根目录存在同名文件
                     pos = root_file_name_list.get(file['name'])
                     need_pop_from_root.append(root_files[pos])
-                    file['time'] = root_files[pos]['time']    # time 信息可以用来补充文件夹中的文件
+                    file['time'] = root_files[pos]['time']  # time 信息可以用来补充文件夹中的文件
                     this_folder['files'].append(file)
-                else:   # 根目录没有同名文件(用户手动删了),文件任在文件夹中，只是根目录不显示，time 信息无法补全了
-                    file['time'] = folder['time']   # 那就设置时间为文件夹的创建时间
+                else:  # 根目录没有同名文件(用户手动删了),文件任在文件夹中，只是根目录不显示，time 信息无法补全了
+                    file['time'] = folder['time']  # 那就设置时间为文件夹的创建时间
                     this_folder['files'].append(file)
             all_sub_folders.append(this_folder)
-        root_files = [file for file in root_files if file not in need_pop_from_root]    # 求差集，获得真正属于根目录的文件
+        root_files = [file for file in root_files if file not in need_pop_from_root]  # 求差集，获得真正属于根目录的文件
         return root_files, all_sub_folders
 
     def delete_rec(self, fid, is_file=True) -> int:
@@ -376,7 +381,7 @@ class LanZouCloud(object):
                 page += 1  # 下一页
             # 文件信息处理
             for file in resp["text"]:
-                filename, ftype = self._get_right_name(file['name_all'])    # 获取真实文件名和格式
+                filename, ftype = self._get_right_name(file['name_all'])  # 获取真实文件名和格式
                 file_list.append({
                     'id': int(file['id']),
                     'name': filename,
@@ -428,7 +433,8 @@ class LanZouCloud(object):
             path_list[name] = int(fid)
         # 获取当前文件夹名称
         if folder_id != -1:
-            current_folder = re.search(r'align="(top|absmiddle)" />&nbsp;(.+?)\s<(span|font)', html).group(2).replace('&amp;', '&')
+            current_folder = re.search(r'align="(top|absmiddle)" />&nbsp;(.+?)\s<(span|font)', html).group(2).replace(
+                '&amp;', '&')
             path_list[current_folder] = folder_id
         return path_list
 
@@ -541,7 +547,7 @@ class LanZouCloud(object):
             file_info = self._post(self._doupload_url, {'task': 12, 'file_id': fid})  # 文件信息
             if not file_info:
                 return {'code': LanZouCloud.NETWORK_ERROR, **no_result}
-            name = file_info.json()['text']     # 无后缀的文件名(获得后缀又要发送请求,没有就没有吧,尽可能减少请求数量)
+            name = file_info.json()['text']  # 无后缀的文件名(获得后缀又要发送请求,没有就没有吧,尽可能减少请求数量)
             desc = file_info.json()['info']
         else:
             url = f_info['new_url']  # 文件夹的分享链接可以直接拿到
@@ -565,12 +571,12 @@ class LanZouCloud(object):
 
     def mkdir(self, parent_id, folder_name, desc='') -> int:
         """创建文件夹(同时设置描述)"""
-        folder_name = folder_name.replace(' ', '_')     # 文件夹名称不能包含空格
-        folder_name = LanZouCloud._name_format(folder_name)     # 去除非法字符
+        folder_name = folder_name.replace(' ', '_')  # 文件夹名称不能包含空格
+        folder_name = LanZouCloud._name_format(folder_name)  # 去除非法字符
         folder_list = self.get_dir_id_list(parent_id)
         if folder_name in folder_list.keys():  # 如果文件夹已经存在，直接返回 id
             return folder_list.get(folder_name)
-        if folder_name in self.get_folders_name_id().keys():     # 防止文件夹名重复导致其它功能混乱
+        if folder_name in self.get_folders_name_id().keys():  # 防止文件夹名重复导致其它功能混乱
             return self.mkdir(parent_id, folder_name + '_', desc)
         post_data = {"task": 2, "parent_id": parent_id or -1, "folder_name": folder_name,
                      "folder_description": desc}
@@ -650,7 +656,7 @@ class LanZouCloud(object):
     def move_folder(self, folder_id, parent_folder_id=-1) -> int:
         """移动文件夹(官方并没有直接支持此功能)"""
         if folder_id == parent_folder_id:
-            return LanZouCloud.FAILED   # 禁止移动文件夹到自身,后果是文件夹被删除
+            return LanZouCloud.FAILED  # 禁止移动文件夹到自身,后果是文件夹被删除
 
         folder_name = self.get_folders_id_name().get(folder_id)
 
@@ -660,23 +666,23 @@ class LanZouCloud(object):
 
         if self.get_dir_list(folder_id):
             logger.debug(f"Found subdirectory in {folder_name} #{folder_id}")
-            return LanZouCloud.FAILED   # 递归操作可能会产生大量请求,这里只移动单层文件夹
+            return LanZouCloud.FAILED  # 递归操作可能会产生大量请求,这里只移动单层文件夹
 
         if self.rename_dir(folder_id, folder_name + '_bak'):
             return LanZouCloud.FAILED
 
         info = self.get_share_info(folder_id, False)
-        new_folder_id = self.mkdir(parent_folder_id, folder_name, info['desc'])   # 在目标文件夹下创建同名文件夹
+        new_folder_id = self.mkdir(parent_folder_id, folder_name, info['desc'])  # 在目标文件夹下创建同名文件夹
         if new_folder_id == LanZouCloud.MKDIR_ERROR:
             return LanZouCloud.FAILED
-        self.set_passwd(new_folder_id, info['pwd'], False)      # 保持密码相同
+        self.set_passwd(new_folder_id, info['pwd'], False)  # 保持密码相同
 
         for name, fid in self.get_file_id_list(folder_id).items():
             code = self.move_file(fid, new_folder_id)
             logger.debug(f"Move {name} to {folder_name} #{new_folder_id}, status: {code}")
             if code != LanZouCloud.SUCCESS:
                 return code
-        self.delete(folder_id, False)   # 删除原文件夹
+        self.delete(folder_id, False)  # 删除原文件夹
         self.delete_rec(folder_id, False)
         return LanZouCloud.SUCCESS
 
@@ -924,9 +930,9 @@ class LanZouCloud(object):
             else:
                 return {'code': LanZouCloud.FAILED, **no_result}  # 其它未知错误
         # 通过文件的时间信息补全文件夹的年份(如果有文件的话)
-        if files:   # 最后一个文件上传时间最早，文件夹的创建年份与其相同
+        if files:  # 最后一个文件上传时间最早，文件夹的创建年份与其相同
             folder_time = files[-1]['time'].split('-')[0] + '-' + folder_time
-        else:   # 可恶，没有文件，日期就设置为今年吧
+        else:  # 可恶，没有文件，日期就设置为今年吧
             folder_time = datetime.today().strftime('%Y-%m-%d')
         return {'code': LanZouCloud.SUCCESS,
                 'folder': {'name': folder_name, 'id': folder_id, 'pwd': dir_pwd, 'time': folder_time,

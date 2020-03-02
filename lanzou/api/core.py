@@ -1,3 +1,7 @@
+"""
+蓝奏网盘 API，封装了对蓝奏云的各种操作，解除了上传格式、大小限制
+"""
+
 import os
 import re
 from datetime import datetime
@@ -6,11 +10,10 @@ from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from urllib3 import disable_warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib3.exceptions import InsecureRequestWarning
-from time import sleep
-from lanzou.utils import *
-from lanzou.mtypes import *
+from lanzou.api.utils import *
+from lanzou.api.types import *
 from typing import List
-from lanzou.models import FileList, FolderList
+from lanzou.api.models import FileList, FolderList
 
 __all__ = ['LanZouCloud']
 
@@ -479,9 +482,9 @@ class LanZouCloud(object):
         """重命名文件夹"""
         # 重命名文件要开会员额
         info = self.get_share_info(folder_id, is_file=False)
-        if info['code'] != LanZouCloud.SUCCESS:
-            return info['code']
-        return self._set_dir_info(folder_id, folder_name, info['desc'])
+        if info.code != LanZouCloud.SUCCESS:
+            return info.code
+        return self._set_dir_info(folder_id, folder_name, info.desc)
 
     def set_desc(self, fid, desc, is_file=True) -> int:
         """设置文件(夹)描述"""
@@ -497,9 +500,9 @@ class LanZouCloud(object):
         else:
             # 文件夹描述可以置空
             info = self.get_share_info(fid, is_file=False)
-            if info['code'] != LanZouCloud.SUCCESS:
-                return info['code']
-            return self._set_dir_info(fid, info['name'], desc)
+            if info.code != LanZouCloud.SUCCESS:
+                return info.code
+            return self._set_dir_info(fid, info.name, desc)
 
     def rename_file(self, file_id, filename):
         """允许会员重命名文件(无法修后缀名)"""
@@ -582,13 +585,13 @@ class LanZouCloud(object):
         return LanZouCloud.SUCCESS
 
     def _upload_small_file(self, file_path, folder_id=-1, callback=None) -> int:
-        """上传文件到蓝奏云上指定的文件夹(默认根目录)"""
+        """绕过格式限制上传不超过 max_size 的文件"""
         if not os.path.isfile(file_path):
             return LanZouCloud.PATH_ERROR
 
         need_delete = False  # 上传完成是否删除
         if not is_name_valid(os.path.basename(file_path)):  # 不允许上传的格式
-            file_path = let_me_upload(file_path)  # 添加了报位的新文件
+            file_path = let_me_upload(file_path)  # 添加了报尾的新文件
             need_delete = True
 
         # 文件已经存在同名文件就删除
@@ -688,14 +691,14 @@ class LanZouCloud(object):
         if dir_id == LanZouCloud.MKDIR_ERROR:
             return LanZouCloud.MKDIR_ERROR
 
-        for file in os.listdir(dir_path):
-            file_path = dir_path + os.sep + file
+        for filename in os.listdir(dir_path):
+            file_path = dir_path + os.sep + filename
             if not os.path.isfile(file_path):
                 continue  # 跳过子文件夹
             code = self.upload_file(file_path, dir_id, callback)
             if code != LanZouCloud.SUCCESS:
                 if failed_callback is not None:
-                    failed_callback(code, file)
+                    failed_callback(code, filename)
         return LanZouCloud.SUCCESS
 
     def down_file_by_url(self, share_url, pwd='', save_path='./Download', callback=None) -> int:
@@ -801,7 +804,6 @@ class LanZouCloud(object):
             elif resp['zt'] == 3:  # 提取码错误
                 return FolderDetail(LanZouCloud.PASSWORD_ERROR)
             elif resp["zt"] == 4:
-                sleep(1)  # 服务器要求刷新，间隔大于一秒才能获得下一个页面
                 continue
             else:
                 return FolderDetail(LanZouCloud.FAILED)  # 其它未知错误
@@ -844,7 +846,37 @@ class LanZouCloud(object):
         logger.debug(f"Big file checking: Failed")
         return None
 
-    def down_dir_by_url(self, share_url, dir_pwd='', save_path='./Download', call_back=None, mkdir=True) -> dict:
+    def _down_big_file(self, name, total_size, file_list, save_path, *, callback=None):
+        """下载分段数据到一个文件，回调函数只显示一个文件"""
+        now_size = 0
+        chunk_size = 4096
+        save_path = save_path + os.sep + name
+
+        with open(save_path, 'wb') as big_file:
+            for file in file_list:
+                try:
+                    durl_info = self.get_durl_by_url(file.url)  # 分段文件无密码
+                except AttributeError:
+                    durl_info = self.get_durl_by_id(file.id)
+                if durl_info.code != LanZouCloud.SUCCESS:
+                    logger.debug(f"Can't get direct url: {file}")
+                    return durl_info.code
+                resp = self._get(durl_info.durl, stream=True)
+                if not resp:
+                    return LanZouCloud.FAILED
+                data_iter = resp.iter_content(chunk_size)
+
+                for chunk in data_iter:
+                    if chunk:
+                        now_size += len(chunk)
+                        big_file.write(chunk)
+                        if callback:
+                            callback(name, total_size, now_size)
+
+        return LanZouCloud.SUCCESS
+
+    def down_dir_by_url(self, share_url, dir_pwd='', save_path='./Download', *, callback=None, mkdir=True,
+                        failed_callback=None) -> int:
         """通过分享链接下载文件夹"""
         folder_detail = self.get_folder_info_by_url(share_url, dir_pwd)
         if folder_detail.code != LanZouCloud.SUCCESS:  # 获取文件信息失败

@@ -1,3 +1,7 @@
+"""
+API 处理网页数据、数据切片时使用的工具
+"""
+
 import logging
 import re
 import os
@@ -11,7 +15,7 @@ __all__ = ['logger', 'remove_notes', 'name_format', 'time_format', 'is_name_vali
 
 # 调试日志设置
 logger = logging.getLogger('lanzou')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 formatter = logging.Formatter(
     fmt="%(asctime)s [line:%(lineno)d] %(funcName)s %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S")

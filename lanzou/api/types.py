@@ -1,3 +1,7 @@
+"""
+API 处理后返回的数据类型
+"""
+
 from collections import namedtuple
 
 File = namedtuple('File', ['name', 'id', 'time', 'size', 'type', 'downs', 'has_pwd', 'has_des'])

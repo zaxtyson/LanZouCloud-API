@@ -1,4 +1,7 @@
-from typing import List
+"""
+容器类，用于储存文件、文件夹，支持 list 的操作，同时支持许多方法方便操作元素
+元素类型为 namedtuple，至少拥有 name id 两个属性才能放入容器
+"""
 
 __all__ = ['FileList', 'FolderList']
 
@@ -29,9 +32,26 @@ class ItemList:
         """所有 item 的 name-id 列表，兼容旧版"""
         return {it.name: it.id for it in self}
 
-    def append(self, file):
-        """插入元素"""
-        self._items.append(file)
+    @property
+    def all_name(self):
+        """所有 item 的 name 列表"""
+        return [it.name for it in self]
+
+    def append(self, item):
+        """在末尾插入元素"""
+        self._items.append(item)
+
+    def index(self, item):
+        """获取索引"""
+        return self._items.index(item)
+
+    def insert(self, pos, item):
+        """指定位置插入元素"""
+        self._items.insert(pos, item)
+
+    def clear(self):
+        """清空元素"""
+        self._items.clear()
 
     def filter(self, condition) -> list:
         """筛选出满足条件的 item
@@ -59,6 +79,14 @@ class ItemList:
                 self._items.remove(item)
                 return item
         return None
+
+    def update_by_id(self, fid, **kwargs):
+        """通过 id 搜索元素并更新"""
+        item = self.find_by_id(fid)
+        pos = self.index(item)
+        data = item._asdict()
+        data.update(kwargs)
+        self._items[pos] = item.__class__(**data)
 
 
 class FileList(ItemList):

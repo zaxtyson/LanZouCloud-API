@@ -644,19 +644,19 @@ class LanZouCloud(object):
         """上传大文件, 且使得回调函数只显示一个文件"""
         file_size = os.path.getsize(file_path)
         file_name = os.path.basename(file_path)
-        upload_size = 0
+        uploaded_size = 0
 
         def _callback(name, t_size, now_size):
-            nonlocal upload_size
+            nonlocal uploaded_size
             if callback is not None:
-                callback(file_name, file_size, upload_size + now_size)
+                callback(file_name, file_size, uploaded_size + now_size)
 
         for path in big_file_split(file_path, max_size=self._max_size):
             code = self._upload_small_file(path, dir_id, _callback)
             if code != LanZouCloud.SUCCESS:
                 logger.debug(f"Upload big file failed:{path=}, {code=}")
                 return LanZouCloud.FAILED  # 只要有一个失败就不用再继续了
-            upload_size += os.path.getsize(path)  # 记录上传总大小
+            uploaded_size += os.path.getsize(path)  # 记录上传总大小
         return LanZouCloud.SUCCESS
 
     def upload_file(self, file_path, folder_id=-1, callback=None) -> int:
@@ -666,17 +666,13 @@ class LanZouCloud(object):
 
         # 单个文件不超过 100MB 时直接上传
         if os.path.getsize(file_path) <= self._max_size * 1048576:
-            code = self._upload_small_file(file_path, folder_id, callback)
-            if code != LanZouCloud.SUCCESS:
-                return code
-            return LanZouCloud.SUCCESS
+            return self._upload_small_file(file_path, folder_id, callback)
 
         # 上传超过 100M 的文件
         folder_name = os.path.basename(file_path).replace('.', '')  # 保存分段文件的文件夹名
         dir_id = self.mkdir(folder_id, folder_name, 'Big File')
         if dir_id == LanZouCloud.MKDIR_ERROR:
             return LanZouCloud.MKDIR_ERROR  # 创建文件夹失败就退出
-
         return self._upload_big_file(file_path, dir_id, callback)
 
     def upload_dir(self, dir_path, folder_id=-1, *, callback=None, failed_callback=None):
@@ -736,8 +732,14 @@ class LanZouCloud(object):
         file_info = un_serialize(last_512_bytes[-512:])
         if file_info is not None:
             real_name = file_info['name']
+            new_file_path = save_path + os.sep + real_name
             logger.debug(f"Find meta info: {real_name=}")
-            os.rename(file_path, save_path + os.sep + real_name)
+            if os.path.exists(new_file_path):
+                os.remove(new_file_path)    # 存在同名文件则删除
+            os.rename(file_path, new_file_path)
+            with open(new_file_path, 'rb+') as f:
+                f.seek(-512, 2)     # 截断最后 512 字节数据
+                f.truncate()
         return LanZouCloud.SUCCESS
 
     def down_file_by_id(self, fid, save_path='./Download', callback=None) -> int:
@@ -821,7 +823,6 @@ class LanZouCloud(object):
 
     def _check_big_file(self, file_list):
         """检查文件列表,判断是否为大文件分段数据"""
-        print(file_list[0])
         txt_files = file_list.filter(lambda f: f.name.endswith('.txt') and 'M' not in f.size)
         if txt_files and len(txt_files) == 1:  # 文件夹里有且仅有一个 txt, 很有可能是保存大文件的文件夹
             try:

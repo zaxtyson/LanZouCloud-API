@@ -24,6 +24,11 @@ class ItemList:
         """用于路径 List 之间排序"""
         return '/'.join(i.name for i in self) < '/'.join(i.name for i in other)
 
+    @property
+    def name_id(self):
+        """所有 item 的 name-id 列表，兼容旧版"""
+        return {it.name: it.id for it in self}
+
     def append(self, file):
         """插入元素"""
         self._items.append(file)

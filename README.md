@@ -27,6 +27,18 @@
 - `master` 分支将自动发布到 PyPI
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
+# `2.4.0` 更新说明
+- 放弃分段压缩，使用更复杂的方式上传大文件
+- 放弃使用修改文件名的方式绕过上传格式限制
+- API 不再返回 `dict`，减少大量使用 `result['attr']` 方式取值，而是返回 `namedtuple`，直接使用 `result.attr` 取值。
+- 获取文件(夹)列表不再返回 `list`，而是返回 `FileList` 或 `FolderList` 对象，支持 `find_by_id()`
+`find_by_name()`、`filter()`、`pop_by_id()` 等方法查找和筛选数据 
+- `get_folders_id_name()` 和 `get_folders_name_id()` 被废弃，使用 `get_move_folders()` 获取网盘全部文件夹列表(FolderList对象)
+使用 `get_move_paths()` 获取网盘全部文件夹的绝对路径列表(排序好的`list`)，因此支持在不同路径下创建同名文件夹
+- 上传下载大文件时隐藏更多细节，回调函数只显示一个文件。边上传边切片数据，减少等待时间，下载时按顺序写入一个文件，无需再次合并
+- 批量上传下载时，使用回调函数 `failed_callback()` 即时处理失败文件，不再等待全部任务完成
+
+
 # `2.3.5` 更新说明
 - 修复发送请求时 `timeout` 无效的问题 [#7](https://github.com/zaxtyson/LanZouCloud-API/issues/7)
 - 修复回收站文件夹中文件名过长，导致后缀丢失，程序闪退的问题 [#14](https://github.com/zaxtyson/LanZouCloud-CMD/issues/14)

@@ -850,9 +850,11 @@ class LanZouCloud(object):
         """下载分段数据到一个文件，回调函数只显示一个文件"""
         now_size = 0
         chunk_size = 4096
-        save_path = save_path + os.sep + name
+        
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
 
-        with open(save_path, 'wb') as big_file:
+        with open(save_path + os.sep + name, 'wb') as big_file:
             for file in file_list:
                 try:
                     durl_info = self.get_durl_by_url(file.url)  # 分段文件无密码

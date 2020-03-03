@@ -107,8 +107,9 @@ def big_file_split(file_path: str, max_size: int = 100):
         # 这些格式的文件一般都比较大
         suffix_list = ('zip', 'rar', 'apk', 'exe', 'pdf', '7z', 'tar', 'iso', 'img', 'gho', 'dmg', 'dwg')
         name = list(file_name.replace('.', '')) + sample('abcdefghijklmnopqrstuvwxyz', 3) + sample('1234567890', 2)
-        shuffle(name)
-        return ''.join(name) + '.' + choice(suffix_list)
+        shuffle(name)  # 打乱顺序
+        name = ''.join(name) + '.' + choice(suffix_list)
+        return name_format(name)  # 确保随机名合法
 
     all_file_list = []  # 全部的临时文件
     with open(file_path, 'rb') as big_file:
@@ -141,8 +142,8 @@ def big_file_split(file_path: str, max_size: int = 100):
     yield info_file
 
     # 正常遍历结束时删除临时目录,失败时保留,方便复现 Bug
-    rmtree(tmp_dir)
-    logger.debug(f"Delete tmp dir: {tmp_dir}")
+    # rmtree(tmp_dir)
+    # logger.debug(f"Delete tmp dir: {tmp_dir}")
 
 
 def let_me_upload(file_path):
@@ -169,4 +170,3 @@ def let_me_upload(file_path):
         data = pickle.dumps(data)
         out_f.write(data)
     return new_file_path
-

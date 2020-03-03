@@ -645,21 +645,27 @@ class LanZouCloud(object):
 
     def _upload_big_file(self, file_path, dir_id, callback=None):
         """上传大文件, 且使得回调函数只显示一个文件"""
-        file_size = os.path.getsize(file_path)
+        file_size = os.path.getsize(file_path)  # 原始文件的字节大小
         file_name = os.path.basename(file_path)
         uploaded_size = 0
 
         def _callback(name, t_size, now_size):
             nonlocal uploaded_size
             if callback is not None:
-                callback(file_name, file_size, uploaded_size + now_size)
+                # MultipartEncoder 以后,文件数据流比原文件略大几百字节, now_size 略大于 file_size
+                now_size = uploaded_size + now_size
+                now_size = now_size if now_size < file_size else file_size  # 99.99% -> 100.00%
+                callback(file_name, file_size, now_size)
 
         for path in big_file_split(file_path, max_size=self._max_size):
-            code = self._upload_small_file(path, dir_id, _callback)
+            if not path.endswith('.txt'):  # 记录文件大小不计入文件总大小
+                code = self._upload_small_file(path, dir_id, _callback)
+                uploaded_size += os.path.getsize(path)  # 记录上传总大小
+            else:
+                code = self._upload_small_file(path, dir_id)
             if code != LanZouCloud.SUCCESS:
                 logger.debug(f"Upload big file failed:{path=}, {code=}")
                 return LanZouCloud.FAILED  # 只要有一个失败就不用再继续了
-            uploaded_size += os.path.getsize(path)  # 记录上传总大小
         return LanZouCloud.SUCCESS
 
     def upload_file(self, file_path, folder_id=-1, callback=None) -> int:
@@ -719,7 +725,7 @@ class LanZouCloud(object):
         total_size = int(resp.headers['Content-Length'])
         now_size = 0
         chunk_size = 4096
-        last_512_bytes = b''    # 用于识别文件是否携带真实文件名信息
+        last_512_bytes = b''  # 用于识别文件是否携带真实文件名信息
         file_path = save_path + os.sep + info.name
         logger.debug(f'Save file to {file_path=}')
         with open(file_path, "wb") as f:
@@ -738,10 +744,10 @@ class LanZouCloud(object):
             new_file_path = save_path + os.sep + real_name
             logger.debug(f"Find meta info: {real_name=}")
             if os.path.exists(new_file_path):
-                os.remove(new_file_path)    # 存在同名文件则删除
+                os.remove(new_file_path)  # 存在同名文件则删除
             os.rename(file_path, new_file_path)
             with open(new_file_path, 'rb+') as f:
-                f.seek(-512, 2)     # 截断最后 512 字节数据
+                f.seek(-512, 2)  # 截断最后 512 字节数据
                 f.truncate()
         return LanZouCloud.SUCCESS
 
@@ -850,7 +856,7 @@ class LanZouCloud(object):
         """下载分段数据到一个文件，回调函数只显示一个文件"""
         now_size = 0
         chunk_size = 4096
-        
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 

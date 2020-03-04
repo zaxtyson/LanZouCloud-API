@@ -142,8 +142,8 @@ def big_file_split(file_path: str, max_size: int = 100):
     yield info_file
 
     # 正常遍历结束时删除临时目录,失败时保留,方便复现 Bug
-    # rmtree(tmp_dir)
-    # logger.debug(f"Delete tmp dir: {tmp_dir}")
+    rmtree(tmp_dir)
+    logger.debug(f"Delete tmp dir: {tmp_dir}")
 
 
 def let_me_upload(file_path):

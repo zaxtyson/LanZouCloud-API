@@ -595,7 +595,7 @@ class LanZouCloud(object):
             need_delete = True
 
         # 文件已经存在同名文件就删除
-        filename = os.path.basename(file_path)
+        filename = name_format(os.path.basename(file_path))
         file_list = self.get_file_list(folder_id)
         if file_list.find_by_name(filename):
             self.delete(file_list.find_by_name(filename).id)
@@ -673,11 +673,11 @@ class LanZouCloud(object):
         if not os.path.isfile(file_path):
             return LanZouCloud.PATH_ERROR
 
-        # 单个文件不超过 100MB 时直接上传
+        # 单个文件不超过 max_size 直接上传
         if os.path.getsize(file_path) <= self._max_size * 1048576:
             return self._upload_small_file(file_path, folder_id, callback)
 
-        # 上传超过 100M 的文件
+        # 上传超过 max_size 的文件
         folder_name = os.path.basename(file_path).replace('.', '')  # 保存分段文件的文件夹名
         dir_id = self.mkdir(folder_id, folder_name, 'Big File')
         if dir_id == LanZouCloud.MKDIR_ERROR:
@@ -739,7 +739,7 @@ class LanZouCloud(object):
                         callback(info.name, total_size, now_size)
         # 尝试解析文件报尾
         file_info = un_serialize(last_512_bytes[-512:])
-        if file_info is not None:
+        if file_info is not None and 'padding' in file_info:  # 大文件的记录文件也可以反序列化出 name,但是没有 padding
             real_name = file_info['name']
             new_file_path = save_path + os.sep + real_name
             logger.debug(f"Find meta info: {real_name=}")
@@ -789,9 +789,8 @@ class LanZouCloud(object):
         files = FileList()
         while True:
             try:
-                # 这里不用封装好的 post 函数是为了支持未登录的用户通过 URL 下载, 无密码时设置 pwd 字段也不影响
                 post_data = {'lx': lx, 'pg': page, 'k': k, 't': t, 'fid': folder_id, 'pwd': dir_pwd}
-                resp = requests.post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
+                resp = self._post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
             except requests.RequestException:
                 return FolderDetail(LanZouCloud.NETWORK_ERROR)
             if resp['zt'] == 1:  # 成功获取一页文件信息

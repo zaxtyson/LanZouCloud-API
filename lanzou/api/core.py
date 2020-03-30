@@ -290,7 +290,7 @@ class LanZouCloud(object):
         folder_list = FolderList()
         post_data = {'task': 47, 'folder_id': folder_id}
         resp = self._post(self._doupload_url, post_data)
-        if not resp or resp.json()['zt'] != 1:
+        if not resp:
             return folder_list
         for folder in resp.json()['text']:
             folder_list.append(
@@ -306,18 +306,12 @@ class LanZouCloud(object):
         """获取文件夹完整路径"""
         path_list = FolderList()
         path_list.append(FolderId('LanZouCloud', -1))
-        html = self._get(self._mydisk_url, params={'item': 'files', 'action': 'index', 'folder_id': folder_id})
-        if not html:
+        post_data = {'task': 47, 'folder_id': folder_id}
+        resp = self._post(self._doupload_url, post_data)
+        if not resp:
             return path_list
-        html = remove_notes(html.text)
-        path = re.findall(r'&raquo;&nbsp;.+?folder_id=(\d+)">.+?&nbsp;(.+?)</a>', html)
-        for fid, name in path:
-            path_list.append(FolderId(name, int(fid)))
-        # 获取当前文件夹名称
-        if folder_id != -1:
-            current_folder = re.search(r'align="(top|absmiddle)" />&nbsp;(.+?)\s<(span|font)', html).group(2).replace(
-                '&amp;', '&')
-            path_list.append(FolderId(current_folder, folder_id))
+        for folder in resp.json()['info']:
+            path_list.append(FolderId(id=int(folder['folderid']), name=folder['name']))
         return path_list
 
     def get_file_info_by_url(self, share_url, pwd='') -> FileDetail:

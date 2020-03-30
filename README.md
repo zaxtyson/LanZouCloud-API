@@ -27,6 +27,8 @@
 - `master` 分支将自动发布到 PyPI
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
+# `v2.4.2`
+- 紧急修复了蓝奏云网页端变化导致  `get_full_path()` 和 `get_dir_list()` 失效的 Bug
 # `v2.4.1`
 - 修复使用 URL 下载时，记录文件被误判为普通文件，导致异常截断的问题
 - 修复上传小文件时没有去除文件名中非法字符的问题

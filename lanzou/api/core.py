@@ -288,19 +288,18 @@ class LanZouCloud(object):
     def get_dir_list(self, folder_id=-1) -> FolderList:
         """获取子文件夹列表"""
         folder_list = FolderList()
-        para = {'item': 'files', 'action': 'index', 'folder_node': 1, 'folder_id': folder_id}
-        html = self._get(self._mydisk_url, params=para)
-        if not html:
+        post_data = {'task': 47, 'folder_id': folder_id}
+        resp = self._post(self._doupload_url, post_data)
+        if not resp or resp.json()['zt'] != 1:
             return folder_list
-        comp = re.compile(r'&nbsp;([^\n]+?)</a>&nbsp;[^\n]+"folk(\d+)"([^\n]*?)>[^\n]+#BBBBBB">\[?(.*?)?\]?</font>', re.DOTALL)
-        info = comp.findall(html.text)
-        for folder_name, fid, pwd_flag, desc in info:
-            folder_list.append(Folder(
-                id=int(fid),
-                name=folder_name.replace('&amp;', '&'),  # 修复网页中的 &amp; 为 &
-                has_pwd=True if pwd_flag else False,  # 有密码时 pwd_flag 值为 style="display:initial"
-                desc=desc  # 文件夹描述信息
-            ))
+        for folder in resp.json()['text']:
+            folder_list.append(
+                Folder(
+                    id=int(folder['fol_id']),
+                    name=folder['name'],
+                    has_pwd=True if folder['onof'] == 1 else False,
+                    desc=folder['folder_des'].strip('[]')
+                ))
         return folder_list
 
     def get_full_path(self, folder_id=-1) -> FolderList:

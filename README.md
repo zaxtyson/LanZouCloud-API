@@ -27,6 +27,13 @@
 - `master` 分支将自动发布到 PyPI
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
+# `v2.4.3`
+- 上传/下载时支持断点续传(包括大文件)
+- 修复 `get_file_info_*()` 无法获取某些文件的文件名和日期的问题
+- 修复 `get_full_path()` 可能碰到无效数据导致崩溃的问题
+- 新增 `clean_ghost_folders()` 用于清理网盘中的"幽灵文件夹"(不在网盘和回收站显示的文件夹,移动文件时可以看见,文件移进去就丢失)
+- 新增 `set_captcha_handler()` 用于处理下载时的验证码校验
+ 
 # `v2.4.2`
 - 紧急修复了蓝奏云网页端变化导致  `get_full_path()` 和 `get_dir_list()` 失效的 Bug
 # `v2.4.1`

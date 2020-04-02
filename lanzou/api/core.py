@@ -292,7 +292,7 @@ class LanZouCloud(object):
         return LanZouCloud.SUCCESS if '恢复成功' in html.text else LanZouCloud.FAILED
 
     def recovery_multi(self, *, files=None, folders=None) -> int:
-        """从回收站恢复多个文件"""
+        """从回收站恢复多个文件(夹)"""
         if not files and not folders:
             return LanZouCloud.FAILED
         para = {'item': 'recycle', 'action': 'files'}
@@ -311,7 +311,7 @@ class LanZouCloud(object):
         return LanZouCloud.SUCCESS if '恢复成功' in html.text else LanZouCloud.FAILED
 
     def recovery_all(self) -> int:
-        """从回收站恢复所有文件"""
+        """从回收站恢复所有文件(夹)"""
         para = {'item': 'recycle', 'action': 'restore_all'}
         post_data = {'action': 'restore_all', 'task': 'restore_all'}
         first_page = self._get(self._mydisk_url, params=para)

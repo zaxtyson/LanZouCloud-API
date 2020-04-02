@@ -386,8 +386,11 @@ class LanZouCloud(object):
         for folder in folder_with_ghost:
             if not real_folders.find_by_id(folder.id):
                 logger.debug(f"Delete ghost folder: {folder.name} #{folder.id}")
-                self.delete(folder.id, False)
-                self.delete_rec(folder.id, False)
+                if self.delete(folder.id, False) != LanZouCloud.SUCCESS:
+                    return LanZouCloud.FAILED
+                if self.delete_rec(folder.id, False) != LanZouCloud.SUCCESS:
+                    return LanZouCloud.FAILED
+        return LanZouCloud.SUCCESS
 
     def get_full_path(self, folder_id=-1) -> FolderList:
         """获取文件夹完整路径"""

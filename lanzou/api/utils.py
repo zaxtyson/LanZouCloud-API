@@ -32,7 +32,7 @@ def remove_notes(html: str) -> str:
 
 def name_format(name: str) -> str:
     """去除非法字符"""
-    name = name.replace(u'\xa0', ' ').replace(u'\u3000', ' ')  # 去除其它字符集的空白符
+    name = name.replace(u'\xa0', ' ').replace(u'\u3000', ' ').replace('  ', ' ')  # 去除其它字符集的空白符,去除重复空白字符
     return re.sub(r'[$%^!*<>)(+=`\'\"/:;,?]', '', name)
 
 
@@ -106,7 +106,8 @@ def big_file_split(file_path: str, max_size: int = 100, start_byte: int = 0) -> 
         """生成一个随机文件名"""
         # 这些格式的文件一般都比较大且不容易触发下载检测
         suffix_list = ('zip', 'rar', 'apk', 'ipa', 'exe', 'pdf', '7z', 'tar', 'deb', 'dmg', 'rpm', 'flac')
-        name = list(file_name.replace('.', '')) + sample('abcdefghijklmnopqrstuvwxyz', 3) + sample('1234567890', 2)
+        name = list(file_name.replace('.', '').replace(' ', ''))
+        name = name + sample('abcdefghijklmnopqrstuvwxyz', 3) + sample('1234567890', 2)
         shuffle(name)  # 打乱顺序
         name = ''.join(name) + '.' + choice(suffix_list)
         return name_format(name)  # 确保随机名合法

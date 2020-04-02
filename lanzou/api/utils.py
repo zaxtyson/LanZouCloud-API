@@ -3,11 +3,11 @@ API 处理网页数据、数据切片时使用的工具
 """
 
 import logging
-import re
 import os
+import pickle
+import re
 from datetime import timedelta, datetime
 from random import uniform, choices, sample, shuffle, choice
-import pickle
 
 __all__ = ['logger', 'remove_notes', 'name_format', 'time_format', 'is_name_valid', 'is_file_url',
            'is_folder_url', 'big_file_split', 'un_serialize', 'let_me_upload']
@@ -54,10 +54,11 @@ def time_format(time_str: str) -> str:
 def is_name_valid(filename: str) -> bool:
     """检查文件名是否允许上传"""
 
-    valid_suffix_list = ('doc', 'docx', 'zip', 'rar', 'apk', 'ipa', 'txt', 'exe', '7z', 'e', 'z', 'ct',
-                         'ke', 'cetrainer', 'db', 'tar', 'pdf', 'w3x', 'epub', 'mobi', 'azw', 'azw3',
-                         'osk', 'osz', 'xpa', 'cpk', 'lua', 'jar', 'dmg', 'ppt', 'pptx', 'xls', 'xlsx',
-                         'mp3', 'iso', 'img', 'gho', 'ttf', 'ttc', 'txf', 'dwg', 'bat', 'dll')
+    valid_suffix_list = ('ppt', 'xapk', 'ke', 'azw', 'cpk', 'gho', 'dwg', 'db', 'docx', 'deb', 'e', 'ttf', 'xls', 'bat',
+                         'crx', 'rpm', 'txf', 'pdf', 'apk', 'ipa', 'txt', 'mobi', 'osk', 'dmg', 'rp', 'osz', 'jar',
+                         'ttc', 'z', 'w3x', 'xlsx', 'cetrainer', 'ct', 'rar', 'mp3', 'pptx', 'mobileconfig', 'epub',
+                         'imazingapp', 'doc', 'iso', 'img', 'appimage', '7z', 'rplib', 'lolgezi', 'exe', 'azw3', 'zip',
+                         'conf', 'tar', 'dll', 'flac', 'xpa', 'lua')
 
     return filename.split('.')[-1] in valid_suffix_list
 
@@ -98,13 +99,13 @@ def big_file_split(file_path: str, max_size: int = 100, start_byte: int = 0) -> 
 
     def get_random_size() -> int:
         """按权重生成一个不超过 max_size 的文件大小"""
-        reduce_size = choices([uniform(0, 10), uniform(10, 20), uniform(40, 60), uniform(60, 80)], weights=[4, 4, 1, 1])
+        reduce_size = choices([uniform(0, 20), uniform(20, 30), uniform(30, 60), uniform(60, 80)], weights=[2, 5, 2, 1])
         return round((max_size - reduce_size[0]) * 1048576)
 
     def get_random_name() -> str:
         """生成一个随机文件名"""
-        # 这些格式的文件一般都比较大
-        suffix_list = ('zip', 'rar', 'apk', 'exe', 'pdf', '7z', 'tar', 'iso', 'img', 'gho', 'dmg', 'dwg')
+        # 这些格式的文件一般都比较大且不容易触发下载检测
+        suffix_list = ('zip', 'rar', 'apk', 'ipa', 'exe', 'pdf', '7z', 'tar', 'deb', 'dmg', 'rpm', 'flac')
         name = list(file_name.replace('.', '')) + sample('abcdefghijklmnopqrstuvwxyz', 3) + sample('1234567890', 2)
         shuffle(name)  # 打乱顺序
         name = ''.join(name) + '.' + choice(suffix_list)
@@ -136,8 +137,10 @@ def let_me_upload(file_path):
     file_size = os.path.getsize(file_path) / 1024 / 1024  # MB
     file_name = os.path.basename(file_path)
 
-    big_file_suffix = choice(['zip', 'rar', 'apk', 'exe', 'pdf', '7z', 'tar', 'iso', 'img', 'gho', 'dmg', 'dwg'])
-    small_file_suffix = choice(['doc', 'ipa', 'epub', 'mobi', 'azw', 'ppt', 'pptx'])
+    big_file_suffix = ['zip', 'rar', 'apk', 'ipa', 'exe', 'pdf', '7z', 'tar', 'deb', 'dmg', 'rpm', 'flac']
+    small_file_suffix = big_file_suffix + ['doc', 'epub', 'mobi', 'mp3', 'ppt', 'pptx']
+    big_file_suffix = choice(big_file_suffix)
+    small_file_suffix = choice(small_file_suffix)
     suffix = small_file_suffix if file_size < 30 else big_file_suffix
     new_file_path = '.'.join(file_path.split('.')[:-1]) + '.' + suffix
 

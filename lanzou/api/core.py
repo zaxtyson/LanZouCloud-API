@@ -316,6 +316,7 @@ class LanZouCloud(object):
 
     def clean_ghost_folders(self):
         """清除网盘中的幽灵文件夹"""
+
         # 可能有一些文件夹，网盘和回收站都看不见它，但是它确实存在，移动文件夹时才会显示
         # 如果不清理掉，不小心将文件移动进去就完蛋了
         def _clean(fid):
@@ -350,13 +351,13 @@ class LanZouCloud(object):
         """识别下载时弹出的验证码,返回下载直链
         :param file_token 文件的标识码,每次刷新会变化
         """
-        if not self._captcha_handler:   # 必需提前设置验证码处理函数
+        if not self._captcha_handler:  # 必需提前设置验证码处理函数
             logger.debug(f"Not set captcha handler function!")
             return None
 
         get_img_api = 'https://vip.d0.baidupan.com/file/imagecode.php?r=' + str(random())
         img_data = self._get(get_img_api).content
-        captcha = self._captcha_handler(img_data)     # 用户手动识别验证码
+        captcha = self._captcha_handler(img_data)  # 用户手动识别验证码
         post_code_api = 'https://vip.d0.baidupan.com/file/ajax.php'
         post_data = {'file': file_token, 'bm': captcha}
         resp = self._post(post_code_api, post_data)
@@ -387,7 +388,7 @@ class LanZouCloud(object):
             if len(pwd) == 0:
                 return FileDetail(LanZouCloud.LACK_PASSWORD)  # 没给提取码直接退出
             # data : 'action=downprocess&sign=AGZRbwEwU2IEDQU6BDRUaFc8DzxfMlRjCjTPlVkWzFSYFY7ATpWYw_c_c&p='+pwd,
-            sign = re.findall(r"sign=(\w+?)&", first_page)[0]
+            sign = re.search(r"sign=(\w+?)&", first_page).group(1)
             post_data = {'action': 'downprocess', 'sign': sign, 'p': pwd}
             link_info = self._post(self._host_url + '/ajaxm.php', post_data)  # 保存了重定向前的链接信息和文件名
             second_page = self._get(share_url)  # 再次请求文件分享页面，可以看见文件名，时间，大小等信息(第二页)
@@ -397,33 +398,30 @@ class LanZouCloud(object):
             second_page = remove_notes(second_page.text)
             # 提取文件信息
             f_name = link_info['inf']
-            f_size = re.findall(r'大小：(.+?)</div>', second_page)[0]
-            f_time = re.findall(r'class="n_file_infos">(.+?)</span>', second_page)[0]
-            f_desc = re.findall(r'class="n_box_des">(.*?)</div>', second_page)[0]
+            f_size = re.search(r'大小：(.+?)</div>', second_page).group(1)
+            f_time = re.search(r'class="n_file_infos">(.+?)</span>', second_page).group(1)
+            f_desc = re.search(r'class="n_box_des">(.*?)</div>', second_page).group(1)
         else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
-            para = re.findall(r'<iframe.*?src="(.+?)"', first_page)[0]  # 提取下载页面 URL 的参数
+            para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
             # 文件名位置变化很多
-            f_name = re.findall(r'<div class="filethetext".+?>(.+?)</div>', first_page) or \
-                     re.findall(r'<div style="font-size.+?>(.+?)</div>', first_page) or \
-                     re.findall(r"var filename = '(.+?)';", first_page)
-            f_name = f_name[0] if f_name else "未匹配到文件名"
+            f_name = re.search(r'<div class="filethetext".+?>(.+?)</div>', first_page) or \
+                     re.search(r'<div style="font-size.+?>(.+?)</div>', first_page) or \
+                     re.search(r"var filename = '(.+?)';", first_page)
+            f_name = f_name.group(1) if f_name else "未匹配到文件名"
             # 文件时间，如果没有就视为今天
-            f_time = re.findall(r'上传时间：</span>(.+?)<br>', first_page)
-            f_time = f_time[0] if f_time else '0 小时前'
-            f_size = re.findall(r'文件大小：</span>(.+?)<br>', first_page)[0]
-            f_desc = re.findall(r'文件描述：</span><br>\n?\s*(.+?)\s*</td>', first_page)[0]
+            f_time = re.search(r'上传时间：</span>(.+?)<br>', first_page)
+            f_time = f_time.group(1) if f_time else '0 小时前'
+            f_size = re.search(r'文件大小：</span>(.+?)<br>', first_page).group(1)
+            f_desc = re.search(r'文件描述：</span><br>\n?\s*(.+?)\s*</td>', first_page).group(1)
             first_page = self._get(self._host_url + para)
             if not first_page:
                 return FileDetail(LanZouCloud.NETWORK_ERROR)
-            first_page = remove_notes(first_page.text)  # 去除网页注释
-            # data: {'action': 'downprocess', 'sign': 'xxx', 'ver': 1}
-            # 一般情况 sign 的值就在 data 里，有时放在变量 sg 后面
-            post_data = re.findall(r'data : (.*),', first_page)[0]
-            try:
-                post_data = eval(post_data)  # 尝试转化为 dict,失败说明 sign 的值放在变量 sg 里
-            except NameError:
-                var_sg = re.search(r"var sg\s*=\s*'(.+?)'", first_page).group(1)  # 提取 sign 的值 'AmRVaw4_a.....'
-                post_data = eval(post_data.replace('sg', f"'{var_sg}'"))  # 替换 sg 为 'AmRVaw4_a.....', 并转换为 dict
+            first_page = remove_notes(first_page.text)
+            # 一般情况 sign 的值就在 data 里，有时放在变量后面
+            sign = re.search(r"'sign':(.+?),", first_page).group(1)
+            if len(sign) < 20:  # 此时 sign 保存在变量里面, 变量名是 sign 匹配的字符
+                sign = re.search(rf"var {sign}\s*=\s*'(.+?)';", first_page).group(1)
+            post_data = {'action': 'downprocess', 'sign': sign, 'ves': 1}
             link_info = self._post(self._host_url + '/ajaxm.php', post_data)
             if not link_info:
                 return FileDetail(LanZouCloud.NETWORK_ERROR)
@@ -434,11 +432,11 @@ class LanZouCloud(object):
             fake_url = link_info['dom'] + '/file/' + link_info['url']  # 假直连，存在流量异常检测
             download_page = self._get(fake_url, allow_redirects=False)
             download_page.encoding = 'utf-8'
-            if '网络不正常' in download_page.text:   # 流量异常，要求输入验证码
+            if '网络不正常' in download_page.text:  # 流量异常，要求输入验证码
                 file_token = re.findall(r"'file':'(.+?)'", download_page.text)[0]
                 direct_url = self._captcha_recognize(file_token)
                 if not direct_url:
-                    return FileDetail(LanZouCloud.NETWORK_ERROR)
+                    return FileDetail(LanZouCloud.FAILED)
             else:
                 direct_url = download_page.headers['Location']  # 重定向后的真直链
 
@@ -773,7 +771,7 @@ class LanZouCloud(object):
             return self._upload_small_file(file_path, folder_id, callback)
 
         # 上传超过 max_size 的文件
-        folder_name = os.path.basename(file_path).replace('.', '')  # 保存分段文件的文件夹名
+        folder_name = os.path.basename(file_path).replace('.', '_mkdir')  # 保存分段文件的文件夹名
         dir_id = self.mkdir(folder_id, folder_name, 'Big File')
         if dir_id == LanZouCloud.MKDIR_ERROR:
             return LanZouCloud.MKDIR_ERROR  # 创建文件夹失败就退出
@@ -956,7 +954,7 @@ class LanZouCloud(object):
 
     def _down_big_file(self, name, total_size, file_list, save_path, *, callback=None):
         """下载分段数据到一个文件，回调函数只显示一个文件
-        支持大文件下载续传，下载完成后重复下载不会执行覆盖操作，直接返回状态码 -1
+        支持大文件下载续传，下载完成后重复下载不会执行覆盖操作，直接返回状态码 SUCCESS
         """
         big_file = save_path + os.sep + name
         record_file = big_file + '.record'
@@ -965,7 +963,7 @@ class LanZouCloud(object):
             os.makedirs(save_path)
 
         if not os.path.exists(record_file):  # 初始化记录文件
-            info = {'finished': [], 'last_ending': 0}
+            info = {'last_ending': 0, 'finished': []}  # 记录上一个数据块结尾地址和已经下载的数据块
             with open(record_file, 'wb') as rf:
                 pickle.dump(info, rf)
         else:  # 读取记录文件，下载续传
@@ -986,11 +984,16 @@ class LanZouCloud(object):
                 # 准备向大文件写入数据
                 file_size_now = os.path.getsize(big_file)
                 down_start_byte = file_size_now - info['last_ending']  # 当前数据块上次下载中断的位置
-                logger.debug(f"Download {file.name}, Start bytes: {down_start_byte}")
                 headers = {**self._headers, 'Range': 'bytes=%d-' % down_start_byte}
+                logger.debug(f"Download {file.name}, Range: {down_start_byte}-")
                 resp = self._get(durl_info.durl, stream=True, headers=headers)
-                if not resp:
+
+                if resp is None:  # 网络错误, 没有响应数据
                     return LanZouCloud.FAILED
+                if resp.status_code == 416:  # 下载完成后重复下载导致 Range 越界, 服务器返回 416
+                    logger.debug(f"File {name} has already downloaded.")
+                    os.remove(record_file)  # 删除记录文件
+                    return LanZouCloud.SUCCESS
 
                 for chunk in resp.iter_content(4096):
                     if chunk:

@@ -35,6 +35,7 @@ class LanZouCloud(object):
     FILE_CANCELLED = 7
     PATH_ERROR = 8
     NETWORK_ERROR = 9
+    CAPTCHA_ERROR = 10
 
     def __init__(self):
         self._session = requests.Session()
@@ -436,7 +437,7 @@ class LanZouCloud(object):
                 file_token = re.findall(r"'file':'(.+?)'", download_page.text)[0]
                 direct_url = self._captcha_recognize(file_token)
                 if not direct_url:
-                    return FileDetail(LanZouCloud.FAILED)
+                    return FileDetail(LanZouCloud.CAPTCHA_ERROR)
             else:
                 direct_url = download_page.headers['Location']  # 重定向后的真直链
 
@@ -829,10 +830,17 @@ class LanZouCloud(object):
         last_512_bytes = b''  # 用于识别文件是否携带真实文件名信息
         headers = {**self._headers, 'Range': 'bytes=%d-' % now_size}
         resp = self._get(info.durl, stream=True, headers=headers)
+
+        if resp is None:    # 网络异常
+            return LanZouCloud.FAILED
+        if resp.status_code == 416:    # 已经下载完成
+            return LanZouCloud.SUCCESS
+
         with open(file_path, "ab") as f:
             for chunk in resp.iter_content(chunk_size):
                 if chunk:
                     f.write(chunk)
+                    f.flush()
                     now_size += len(chunk)
                     if total_size - now_size < 512:
                         last_512_bytes += chunk

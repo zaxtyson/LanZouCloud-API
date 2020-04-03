@@ -462,8 +462,8 @@ class LanZouCloud(object):
         else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
             para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
             # 文件名位置变化很多
-            f_name = re.search(r'<div class="filethetext".+?>(.+?)</div>', first_page) or \
-                     re.search(r'<div style="font-size.+?>(.+?)</div>', first_page) or \
+            f_name = re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
+                     re.search(r'<div style="font-size.+?>([^<>].+?)</div>', first_page) or \
                      re.search(r"var filename = '(.+?)';", first_page)
             f_name = f_name.group(1) if f_name else "未匹配到文件名"
             # 文件时间，如果没有就视为今天

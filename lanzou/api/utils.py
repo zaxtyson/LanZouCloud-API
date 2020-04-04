@@ -65,13 +65,13 @@ def is_name_valid(filename: str) -> bool:
 
 def is_file_url(share_url: str) -> bool:
     """判断是否为文件的分享链接"""
-    pat = 'https?://www.lanzous.com/i[a-z0-9]{6,}/?'
+    pat = 'https?://www.lanzous.com/[a-z][a-z0-9]{5,}/?'
     return True if re.fullmatch(pat, share_url) else False
 
 
 def is_folder_url(share_url: str) -> bool:
     """判断是否为文件夹的分享链接"""
-    pat = 'https?://www.lanzous.com/b[a-z0-9]{7,}/?'
+    pat = 'https?://www.lanzous.com/[a-z][a-z0-9]{7,}/?'
     return True if re.fullmatch(pat, share_url) else False
 
 

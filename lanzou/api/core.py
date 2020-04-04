@@ -464,13 +464,17 @@ class LanZouCloud(object):
             # 文件名位置变化很多
             f_name = re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
                      re.search(r'<div style="font-size.+?>([^<>].+?)</div>', first_page) or \
-                     re.search(r"var filename = '(.+?)';", first_page)
+                     re.search(r"var filename = '(.+?)';", first_page) or \
+                     re.search(r'id="filenajax">(.+?)</div>', first_page)  # VIP 分享页面
             f_name = f_name.group(1) if f_name else "未匹配到文件名"
             # 文件时间，如果没有就视为今天
             f_time = re.search(r'上传时间：</span>(.+?)<br>', first_page)
             f_time = f_time.group(1) if f_time else '0 小时前'
-            f_size = re.search(r'文件大小：</span>(.+?)<br>', first_page).group(1)
-            f_desc = re.search(r'文件描述：</span><br>\n?\s*(.+?)\s*</td>', first_page).group(1)
+            f_size = re.search(r'文件大小：</span>(.+?)<br>', first_page) or \
+                     re.search(r'大小：(.+?)</div>', first_page)  # VIP 分享页面
+            f_size = f_size.group(1) if f_size else '0 M'
+            f_desc = re.search(r'文件描述：</span><br>\n?\s*(.+?)\s*</td>', first_page)
+            f_desc = f_desc.group(1) if f_desc else ''
             first_page = self._get(self._host_url + para)
             if not first_page:
                 return FileDetail(LanZouCloud.NETWORK_ERROR)
@@ -888,9 +892,9 @@ class LanZouCloud(object):
         headers = {**self._headers, 'Range': 'bytes=%d-' % now_size}
         resp = self._get(info.durl, stream=True, headers=headers)
 
-        if resp is None:    # 网络异常
+        if resp is None:  # 网络异常
             return LanZouCloud.FAILED
-        if resp.status_code == 416:    # 已经下载完成
+        if resp.status_code == 416:  # 已经下载完成
             return LanZouCloud.SUCCESS
 
         with open(file_path, "ab") as f:

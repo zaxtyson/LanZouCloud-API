@@ -462,10 +462,12 @@ class LanZouCloud(object):
         else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
             para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
             # 文件名位置变化很多
-            f_name = re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
+            f_name = re.search(r"<title>(.+?) - 蓝奏云</title>", first_page) or \
+                     re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
                      re.search(r'<div style="font-size.+?>([^<>].+?)</div>', first_page) or \
                      re.search(r"var filename = '(.+?)';", first_page) or \
-                     re.search(r'id="filenajax">(.+?)</div>', first_page)  # VIP 分享页面
+                     re.search(r'id="filenajax">(.+?)</div>', first_page) or \
+                     re.search(r'<div class="b"><span>([^<>]+?)</span></div>', first_page)
             f_name = f_name.group(1) if f_name else "未匹配到文件名"
             # 文件时间，如果没有就视为今天
             f_time = re.search(r'上传时间：</span>(.+?)<br>', first_page)
@@ -493,6 +495,8 @@ class LanZouCloud(object):
         if link_info['zt'] == 1:
             fake_url = link_info['dom'] + '/file/' + link_info['url']  # 假直连，存在流量异常检测
             download_page = self._get(fake_url, allow_redirects=False)
+            if not download_page:
+                return FileDetail(LanZouCloud.NETWORK_ERROR)
             download_page.encoding = 'utf-8'
             if '网络不正常' in download_page.text:  # 流量异常，要求输入验证码
                 file_token = re.findall(r"'file':'(.+?)'", download_page.text)[0]
@@ -507,7 +511,7 @@ class LanZouCloud(object):
                               name=f_name, size=f_size, type=f_type, time=time_format(f_time),
                               desc=f_desc, pwd=pwd, url=share_url, durl=direct_url)
         else:
-            return FileDetail(LanZouCloud.PASSWORD_ERROR)
+            return FileDetail(LanZouCloud.FAILED)
 
     def get_file_info_by_id(self, file_id) -> FileDetail:
         """通过 id 获取文件信息"""

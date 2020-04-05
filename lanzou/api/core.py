@@ -40,7 +40,7 @@ class LanZouCloud(object):
     def __init__(self):
         self._session = requests.Session()
         self._captcha_handler = None
-        self._timeout = 5  # 每个请求的超时(不包含下载响应体的用时)
+        self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
         self._host_url = 'https://www.lanzous.com'
         self._doupload_url = 'https://pc.woozooo.com/doupload.php'
@@ -478,7 +478,7 @@ class LanZouCloud(object):
             # 匹配文件大小
             f_size = re.search(r'大小.+?(\d[\d.]+\s?[BKM]?)<', first_page)
             f_size = f_size.group(1) if f_size else '0 M'
-            f_desc = re.search(r'文件描述.+?<br>\n?\s*(.+?)\s*</td>', first_page)
+            f_desc = re.search(r'文件描述.+?<br>\n?\s*(.*?)\s*</td>', first_page)
             f_desc = f_desc.group(1) if f_desc else ''
             first_page = self._get(self._host_url + para)
             if not first_page:

@@ -431,34 +431,37 @@ class LanZouCloud(object):
         :param pwd: 文件提取码(如果有的话)
         """
         if not is_file_url(share_url):  # 非文件链接返回错误
-            return FileDetail(LanZouCloud.URL_INVALID)
+            return FileDetail(LanZouCloud.URL_INVALID, pwd=pwd, url=share_url)
 
         first_page = self._get(share_url)  # 文件分享页面(第一页)
         if not first_page:
-            return FileDetail(LanZouCloud.NETWORK_ERROR)
+            return FileDetail(LanZouCloud.NETWORK_ERROR, pwd=pwd, url=share_url)
 
         first_page = remove_notes(first_page.text)  # 去除网页里的注释
         if '文件取消' in first_page:
-            return FileDetail(LanZouCloud.FILE_CANCELLED)
+            return FileDetail(LanZouCloud.FILE_CANCELLED, pwd=pwd, url=share_url)
 
         # 这里获取下载直链 304 重定向前的链接
         if '输入密码' in first_page:  # 文件设置了提取码时
             if len(pwd) == 0:
-                return FileDetail(LanZouCloud.LACK_PASSWORD)  # 没给提取码直接退出
+                return FileDetail(LanZouCloud.LACK_PASSWORD, pwd=pwd, url=share_url)  # 没给提取码直接退出
             # data : 'action=downprocess&sign=AGZRbwEwU2IEDQU6BDRUaFc8DzxfMlRjCjTPlVkWzFSYFY7ATpWYw_c_c&p='+pwd,
             sign = re.search(r"sign=(\w+?)&", first_page).group(1)
             post_data = {'action': 'downprocess', 'sign': sign, 'p': pwd}
             link_info = self._post(self._host_url + '/ajaxm.php', post_data)  # 保存了重定向前的链接信息和文件名
             second_page = self._get(share_url)  # 再次请求文件分享页面，可以看见文件名，时间，大小等信息(第二页)
             if not link_info or not second_page.text:
-                return FileDetail(LanZouCloud.NETWORK_ERROR)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, pwd=pwd, url=share_url)
             link_info = link_info.json()
             second_page = remove_notes(second_page.text)
             # 提取文件信息
             f_name = link_info['inf']
-            f_size = re.search(r'大小：(.+?)</div>', second_page).group(1)
-            f_time = re.search(r'class="n_file_infos">(.+?)</span>', second_page).group(1)
-            f_desc = re.search(r'class="n_box_des">(.*?)</div>', second_page).group(1)
+            f_size = re.search(r'大小.+?(\d[\d.]+\s?[BKM]?)<', second_page)
+            f_size = f_size.group(1) if f_size else '0 M'
+            f_time = re.search(r'class="n_file_infos">(.+?)</span>', second_page)
+            f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
+            f_desc = re.search(r'class="n_box_des">(.*?)</div>', second_page)
+            f_desc = f_desc.group(1) if f_desc else ''
         else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
             para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
             # 文件名位置变化很多
@@ -469,17 +472,17 @@ class LanZouCloud(object):
                      re.search(r'id="filenajax">(.+?)</div>', first_page) or \
                      re.search(r'<div class="b"><span>([^<>]+?)</span></div>', first_page)
             f_name = f_name.group(1) if f_name else "未匹配到文件名"
-            # 文件时间，如果没有就视为今天
-            f_time = re.search(r'上传时间：</span>(.+?)<br>', first_page)
-            f_time = f_time.group(1) if f_time else '0 小时前'
-            f_size = re.search(r'文件大小：</span>(.+?)<br>', first_page) or \
-                     re.search(r'大小：(.+?)</div>', first_page)  # VIP 分享页面
+            # 匹配文件时间，文件没有时间信息就视为今天，统一表示为 2020-01-01 格式
+            f_time = re.search(r'>(\d+\s?[秒天分小][钟时]?前|[昨前]天\s?[\d:]+?|\d+\s?天前|\d{4}-\d\d-\d\d)<', first_page)
+            f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
+            # 匹配文件大小
+            f_size = re.search(r'大小.+?(\d[\d.]+\s?[BKM]?)<', first_page)
             f_size = f_size.group(1) if f_size else '0 M'
-            f_desc = re.search(r'文件描述：</span><br>\n?\s*(.+?)\s*</td>', first_page)
+            f_desc = re.search(r'文件描述.+?<br>\n?\s*(.+?)\s*</td>', first_page)
             f_desc = f_desc.group(1) if f_desc else ''
             first_page = self._get(self._host_url + para)
             if not first_page:
-                return FileDetail(LanZouCloud.NETWORK_ERROR)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
             first_page = remove_notes(first_page.text)
             # 一般情况 sign 的值就在 data 里，有时放在变量后面
             sign = re.search(r"'sign':(.+?),", first_page).group(1)
@@ -488,7 +491,7 @@ class LanZouCloud(object):
             post_data = {'action': 'downprocess', 'sign': sign, 'ves': 1}
             link_info = self._post(self._host_url + '/ajaxm.php', post_data)
             if not link_info:
-                return FileDetail(LanZouCloud.NETWORK_ERROR)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
             else:
                 link_info = link_info.json()
         # 这里开始获取文件直链
@@ -496,22 +499,22 @@ class LanZouCloud(object):
             fake_url = link_info['dom'] + '/file/' + link_info['url']  # 假直连，存在流量异常检测
             download_page = self._get(fake_url, allow_redirects=False)
             if not download_page:
-                return FileDetail(LanZouCloud.NETWORK_ERROR)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
             download_page.encoding = 'utf-8'
             if '网络不正常' in download_page.text:  # 流量异常，要求输入验证码
                 file_token = re.findall(r"'file':'(.+?)'", download_page.text)[0]
                 direct_url = self._captcha_recognize(file_token)
                 if not direct_url:
-                    return FileDetail(LanZouCloud.CAPTCHA_ERROR)
+                    return FileDetail(LanZouCloud.CAPTCHA_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
             else:
                 direct_url = download_page.headers['Location']  # 重定向后的真直链
 
             f_type = f_name.split('.')[-1]
             return FileDetail(LanZouCloud.SUCCESS,
-                              name=f_name, size=f_size, type=f_type, time=time_format(f_time),
+                              name=f_name, size=f_size, type=f_type, time=f_time,
                               desc=f_desc, pwd=pwd, url=share_url, durl=direct_url)
         else:
-            return FileDetail(LanZouCloud.FAILED)
+            return FileDetail(LanZouCloud.FAILED, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
 
     def get_file_info_by_id(self, file_id) -> FileDetail:
         """通过 id 获取文件信息"""

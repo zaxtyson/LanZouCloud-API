@@ -5,7 +5,7 @@ with open("README.md", "r", encoding='utf8') as fh:
 
 setuptools.setup(
     name="lanzou-api",
-    version="2.4.3",
+    version="2.4.4",
     author="zaxtyson",
     author_email="zaxtyson@foxmail.com",
     description="LanZouCloud API",

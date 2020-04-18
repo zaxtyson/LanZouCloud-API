@@ -665,7 +665,8 @@ class LanZouCloud(object):
         resp = self._post(self._doupload_url, data={"task": 19, "file_id": -1})
         if not resp or resp.json()['zt'] != 1:  # 获取失败或者网络异常
             return result
-        for folder in resp.json()['info']:
+        info = resp.json()['info'] or []    # 新注册用户无数据, info=None
+        for folder in info:
             folder_id, folder_name = int(folder['folder_id']), folder['folder_name']
             result.append(FolderId(folder_name, folder_id))
         return result

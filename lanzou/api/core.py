@@ -8,7 +8,8 @@ import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from random import shuffle, random
+from random import shuffle, random, uniform
+from time import sleep
 from typing import List
 
 import requests
@@ -42,6 +43,7 @@ class LanZouCloud(object):
         self._captcha_handler = None
         self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
+        self._upload_delay = (0, 0)  # 文件上传延时
         self._host_url = 'https://www.lanzous.com'
         self._doupload_url = 'https://pc.woozooo.com/doupload.php'
         self._account_url = 'https://pc.woozooo.com/account.php'
@@ -76,6 +78,13 @@ class LanZouCloud(object):
             return LanZouCloud.FAILED
         self._max_size = max_size
         return LanZouCloud.SUCCESS
+
+    def set_upload_delay(self, min_s: int, max_s: int) -> int:
+        """设置上传大文件数据块时，相邻两次上传之间的延时，减小被封号的可能"""
+        if 0 <= min_s <= max_s:
+            self._upload_delay = (min_s, max_s)
+            return LanZouCloud.SUCCESS
+        return LanZouCloud.FAILED
 
     def set_captcha_handler(self, captcha_handler):
         """设置下载验证码处理函数
@@ -482,7 +491,8 @@ class LanZouCloud(object):
             f_desc = f_desc.group(1) if f_desc else ''
             first_page = self._get(self._host_url + para)
             if not first_page:
-                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                  pwd=pwd, url=share_url)
             first_page = remove_notes(first_page.text)
             # 一般情况 sign 的值就在 data 里，有时放在变量后面
             sign = re.search(r"'sign':(.+?),", first_page).group(1)
@@ -491,7 +501,8 @@ class LanZouCloud(object):
             post_data = {'action': 'downprocess', 'sign': sign, 'ves': 1}
             link_info = self._post(self._host_url + '/ajaxm.php', post_data)
             if not link_info:
-                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                  pwd=pwd, url=share_url)
             else:
                 link_info = link_info.json()
         # 这里开始获取文件直链
@@ -499,13 +510,15 @@ class LanZouCloud(object):
             fake_url = link_info['dom'] + '/file/' + link_info['url']  # 假直连，存在流量异常检测
             download_page = self._get(fake_url, allow_redirects=False)
             if not download_page:
-                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
+                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                  pwd=pwd, url=share_url)
             download_page.encoding = 'utf-8'
             if '网络不正常' in download_page.text:  # 流量异常，要求输入验证码
                 file_token = re.findall(r"'file':'(.+?)'", download_page.text)[0]
                 direct_url = self._captcha_recognize(file_token)
                 if not direct_url:
-                    return FileDetail(LanZouCloud.CAPTCHA_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
+                    return FileDetail(LanZouCloud.CAPTCHA_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                      pwd=pwd, url=share_url)
             else:
                 direct_url = download_page.headers['Location']  # 重定向后的真直链
 
@@ -514,7 +527,8 @@ class LanZouCloud(object):
                               name=f_name, size=f_size, type=f_type, time=f_time,
                               desc=f_desc, pwd=pwd, url=share_url, durl=direct_url)
         else:
-            return FileDetail(LanZouCloud.FAILED, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd, url=share_url)
+            return FileDetail(LanZouCloud.FAILED, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd,
+                              url=share_url)
 
     def get_file_info_by_id(self, file_id) -> FileDetail:
         """通过 id 获取文件信息"""
@@ -716,7 +730,7 @@ class LanZouCloud(object):
         self.delete_rec(folder_id, False)
         return LanZouCloud.SUCCESS
 
-    def _upload_small_file(self, file_path, folder_id=-1, callback=None) -> int:
+    def _upload_small_file(self, file_path, folder_id=-1, *, callback=None, uploaded_handler=None) -> int:
         """绕过格式限制上传不超过 max_size 的文件"""
         if not os.path.isfile(file_path):
             return LanZouCloud.PATH_ERROR
@@ -768,14 +782,16 @@ class LanZouCloud(object):
             logger.debug(f'Upload failed: {result=}')
             return LanZouCloud.FAILED  # 上传失败
 
-        file_id = result["text"][0]["id"]
-        self.set_passwd(file_id)  # 文件上传后默认关闭提取码
+        if uploaded_handler is not None:
+            file_id = int(result["text"][0]["id"])
+            uploaded_handler(file_id, is_file=True)  # 对已经上传的文件再进一步处理
+
         if need_delete:
             file.close()
             os.remove(file_path)
         return LanZouCloud.SUCCESS
 
-    def _upload_big_file(self, file_path, dir_id, callback=None):
+    def _upload_big_file(self, file_path, dir_id, *, callback=None, uploaded_handler=None):
         """上传大文件, 且使得回调函数只显示一个文件"""
         file_size = os.path.getsize(file_path)  # 原始文件的字节大小
         file_name = os.path.basename(file_path)
@@ -803,9 +819,12 @@ class LanZouCloud(object):
                 now_size = now_size if now_size < file_size else file_size  # 99.99% -> 100.00%
                 callback(file_name, file_size, now_size)
 
+        def _close_pwd(fid, is_file):  # 数据块上传后默认关闭提取码
+            self.set_passwd(fid)
+
         while uploaded_size < file_size:
             data_size, data_path = big_file_split(file_path, self._max_size, start_byte=uploaded_size)
-            code = self._upload_small_file(data_path, dir_id, _callback)
+            code = self._upload_small_file(data_path, dir_id, callback=_callback, uploaded_handler=_close_pwd)
             if code == LanZouCloud.SUCCESS:
                 uploaded_size += data_size  # 更新已上传的总字节大小
                 info['uploaded'] = uploaded_size
@@ -816,6 +835,11 @@ class LanZouCloud(object):
             else:
                 logger.debug(f"Upload data file failed: {data_path=}")
                 return LanZouCloud.FAILED
+            os.remove(data_path)  # 删除临时数据块
+            min_s, max_s = self._upload_delay  # 设置两次上传间的延时，减小封号可能性
+            sleep_time = uniform(min_s, max_s)
+            logger.debug(f"Sleeping, Upload task will resume after {sleep_time:.2f}s...")
+            sleep(sleep_time)
 
         # 全部数据块上传完成
         record_name = list(file_name.replace('.', ''))  # 记录文件名也打乱
@@ -823,7 +847,7 @@ class LanZouCloud(object):
         record_name = name_format(''.join(record_name)) + '.txt'
         record_file_new = tmp_dir + os.sep + record_name
         os.rename(record_file, record_file_new)
-        code = self._upload_small_file(record_file_new, dir_id)  # 上传记录文件
+        code = self._upload_small_file(record_file_new, dir_id, uploaded_handler=_close_pwd)  # 上传记录文件
         if code != LanZouCloud.SUCCESS:
             logger.debug(f"Upload record file failed: {record_file_new}")
             return LanZouCloud.FAILED
@@ -832,28 +856,53 @@ class LanZouCloud(object):
         logger.debug(f"Upload finished, Delete tmp folder:{tmp_dir}")
         return LanZouCloud.SUCCESS
 
-    def upload_file(self, file_path, folder_id=-1, callback=None) -> int:
-        """解除限制上传文件"""
+    def upload_file(self, file_path, folder_id=-1, *, callback=None, uploaded_handler=None) -> int:
+        """解除限制上传文件
+        :param callback 用于显示上传进度的回调函数
+                def callback(file_name, total_size, now_size):
+                    print(f"\r文件名:{file_name}, 进度: {now_size}/{total_size}")
+                    ...
+
+        :param uploaded_handler 用于进一步处理上传完成后的文件, 对大文件而已是处理文件夹(数据块默认关闭密码)
+                def uploaded_handler(fid, is_file):
+                    if is_file:
+                        self.set_desc(fid, '...', is_file=True)
+                        ...
+        """
         if not os.path.isfile(file_path):
             return LanZouCloud.PATH_ERROR
 
         # 单个文件不超过 max_size 直接上传
         if os.path.getsize(file_path) <= self._max_size * 1048576:
-            return self._upload_small_file(file_path, folder_id, callback)
+            return self._upload_small_file(file_path, folder_id, callback=callback, uploaded_handler=uploaded_handler)
 
         # 上传超过 max_size 的文件
         folder_name = os.path.basename(file_path)  # 保存分段文件的文件夹名
         dir_id = self.mkdir(folder_id, folder_name, 'Big File')
         if dir_id == LanZouCloud.MKDIR_ERROR:
             return LanZouCloud.MKDIR_ERROR  # 创建文件夹失败就退出
-        return self._upload_big_file(file_path, dir_id, callback)
 
-    def upload_dir(self, dir_path, folder_id=-1, *, callback=None, failed_callback=None):
+        if uploaded_handler is not None:
+            uploaded_handler(dir_id, is_file=False)
+        return self._upload_big_file(file_path, dir_id, callback=callback, uploaded_handler=uploaded_handler)
+
+    def upload_dir(self, dir_path, folder_id=-1, *, callback=None, failed_callback=None, uploaded_handler=None):
         """批量上传文件夹中的文件(不会递归上传子文件夹)
         :param folder_id: 网盘文件夹 id
         :param dir_path: 文件夹路径
-        :param callback (filename, total_size, now_size) 用于显示进度
-        :param failed_callback (code, file) 用于处理上传失败的文件
+        :param callback 用于显示进度
+                def callback(file_name, total_size, now_size):
+                    print(f"\r文件名:{file_name}, 进度: {now_size}/{total_size}")
+                    ...
+        :param failed_callback 用于处理上传失败文件的回调函数
+                def failed_callback(code, file_name):
+                    print(f"上传失败, 文件名: {file_name}, 错误码: {code}")
+                    ...
+        :param uploaded_handler 用于进一步处理上传完成后的文件, 对大文件而已是处理文件夹(数据块默认关闭密码)
+                def uploaded_handler(fid, is_file):
+                    if is_file:
+                        self.set_desc(fid, '...', is_file=True)
+                        ...
         """
         if not os.path.isdir(dir_path):
             return LanZouCloud.PATH_ERROR
@@ -867,7 +916,7 @@ class LanZouCloud(object):
             file_path = dir_path + os.sep + filename
             if not os.path.isfile(file_path):
                 continue  # 跳过子文件夹
-            code = self.upload_file(file_path, dir_id, callback)
+            code = self.upload_file(file_path, dir_id, callback=callback, uploaded_handler=uploaded_handler)
             if code != LanZouCloud.SUCCESS:
                 if failed_callback is not None:
                     failed_callback(code, filename)
@@ -937,7 +986,7 @@ class LanZouCloud(object):
             return info.code
         return self.down_file_by_url(info.url, info.pwd, save_path, callback)
 
-    def get_folder_info_by_url(self, share_url, dir_pwd=''):
+    def get_folder_info_by_url(self, share_url, dir_pwd='') -> FolderDetail:
         """获取文件夹里所有文件的信息"""
         if is_file_url(share_url):
             return FolderDetail(LanZouCloud.URL_INVALID)
@@ -1094,7 +1143,18 @@ class LanZouCloud(object):
 
     def down_dir_by_url(self, share_url, dir_pwd='', save_path='./Download', *, callback=None, mkdir=True,
                         failed_callback=None) -> int:
-        """通过分享链接下载文件夹"""
+        """通过分享链接下载文件夹
+        :param save_path 文件夹保存路径
+        :param mkdir 是否在 save_path 下创建与远程文件夹同名的文件夹
+        :param callback: 用于显示单个文件下载进度的回调函数
+        :param failed_callback 用于处理下载失败文件的回调函数,
+                def failed_callback(code, file):
+                    print(f"文件名: {file.name}, 时间: {file.time}, 大小: {file.size}, 类型: {file.type}")   # 共有属性
+                    if hasattr(file, 'url'):    # 使用 URL 下载时
+                        print(f"文件下载失败, 链接: {file.url},  错误码: code")
+                    else:   # 登录后使用 ID 下载时
+                        print(f"文件下载失败, ID: {file.id},  错误码: code")
+        """
         folder_detail = self.get_folder_info_by_url(share_url, dir_pwd)
         if folder_detail.code != LanZouCloud.SUCCESS:  # 获取文件信息失败
             return folder_detail.code

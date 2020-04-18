@@ -79,10 +79,10 @@ class LanZouCloud(object):
         self._max_size = max_size
         return LanZouCloud.SUCCESS
 
-    def set_upload_delay(self, min_s: int, max_s: int) -> int:
+    def set_upload_delay(self, t_range: tuple) -> int:
         """设置上传大文件数据块时，相邻两次上传之间的延时，减小被封号的可能"""
-        if 0 <= min_s <= max_s:
-            self._upload_delay = (min_s, max_s)
+        if 0 <= t_range[0] <= t_range[1]:
+            self._upload_delay = t_range
             return LanZouCloud.SUCCESS
         return LanZouCloud.FAILED
 

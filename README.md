@@ -32,6 +32,9 @@
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
+## `v2.5.1`
+- 修复蓝奏云域名变更导致的链接判断失误的问题[#25](https://github.com/zaxtyson/LanZouCloud-API/pull/25#issue-437387544)
+
 ## `v2.5.0`
 - 新增函数 `ignore_limits()`, 解除官方限制(默认关闭状态, 不允许上传大文件, 文件格式限制)
 - *解除官方限制, 意味着您要承担由此带来的风险*

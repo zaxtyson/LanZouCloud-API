@@ -32,6 +32,9 @@
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
+## `v2.5.2`
+- 修复子域名不存在导致链接判断失误的问题[#26](https://github.com/zaxtyson/LanZouCloud-API/issues/26)
+
 ## `v2.5.1`
 - 修复蓝奏云域名变更导致的链接判断失误的问题[#25](https://github.com/zaxtyson/LanZouCloud-API/pull/25#issue-437387544)
 

@@ -32,6 +32,10 @@
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
+
+## `v2.5.3`
+- 修复 URL 包含大写字符无法匹配的问题 [#28](https://github.com/zaxtyson/LanZouCloud-API/issues/28#issue-657986430)
+
 ## `v2.5.2`
 - 修复子域名不存在导致链接判断失误的问题[#26](https://github.com/zaxtyson/LanZouCloud-API/issues/26)
 

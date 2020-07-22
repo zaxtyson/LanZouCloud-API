@@ -1,5 +1,5 @@
 from lanzou.api.core import LanZouCloud
 
-version = '2.5.2'
+version = '2.5.3'
 
 __all__ = ['utils', 'types', 'models', 'LanZouCloud', 'version']

@@ -32,6 +32,9 @@
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
+## `v2.5.4`
+- 解决了下载时出现的验证问题，不需要手动识别图形验证码，因此去除了 `set_captcha_handler()` 方法 [#32](https://github.com/zaxtyson/LanZouCloud-API/issues/32)
+- 取消使用 `f-string debug` 特性，向下兼容 Python3.6 [#30](https://github.com/zaxtyson/LanZouCloud-API/issues/30#issuecomment-662780082)
 
 ## `v2.5.3`
 - 修复 URL 包含大写字符无法匹配的问题 [#28](https://github.com/zaxtyson/LanZouCloud-API/issues/28#issue-657986430)

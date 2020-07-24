@@ -484,8 +484,9 @@ class LanZouCloud(object):
             if not link_info:
                 return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
                                   pwd=pwd, url=share_url)
+            link_info = link_info.json()
+
         # 这里开始获取文件直链
-        link_info = link_info.json()
         if link_info['zt'] != 1:    # 返回信息异常，无法获取直链
             return FileDetail(LanZouCloud.FAILED, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd,
                               url=share_url)

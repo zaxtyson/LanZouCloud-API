@@ -1015,7 +1015,7 @@ class LanZouCloud(object):
             try:
                 post_data = {'lx': lx, 'pg': page, 'k': k, 't': t, 'fid': folder_id, 'pwd': dir_pwd}
                 resp = self._post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
-            except requests.RequestException:
+            except (requests.RequestException, AttributeError):
                 return FolderDetail(LanZouCloud.NETWORK_ERROR)
             if resp['zt'] == 1:  # 成功获取一页文件信息
                 for f in resp["text"]:

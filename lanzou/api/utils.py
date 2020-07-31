@@ -11,7 +11,7 @@ from random import uniform, choices, sample, shuffle, choice
 import requests
 
 __all__ = ['logger', 'remove_notes', 'name_format', 'time_format', 'is_name_valid', 'is_file_url',
-           'is_folder_url', 'big_file_split', 'un_serialize', 'let_me_upload']
+           'is_folder_url', 'big_file_split', 'un_serialize', 'let_me_upload', 'auto_rename']
 
 # 调试日志设置
 logger = logging.getLogger('lanzou')
@@ -74,7 +74,7 @@ def is_name_valid(filename: str) -> bool:
 
 def is_file_url(share_url: str) -> bool:
     """判断是否为文件的分享链接"""
-    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'     # 子域名可个性化设置或者不存在
+    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'  # 子域名可个性化设置或者不存在
     user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/i[a-zA-Z0-9]{5,}/?'  # 普通用户 URL 规则
     if not re.fullmatch(base_pat, share_url):
         return False
@@ -190,3 +190,13 @@ def let_me_upload(file_path):
         data = pickle.dumps(data)
         out_f.write(data)
     return new_file_path
+
+
+def auto_rename(file_path) -> str:
+    """如果文件存在，则给文件名添加序号"""
+    if not os.path.exists(file_path):
+        return file_path
+    fpath, fname = os.path.split(file_path)
+    fname_no_ext, extension = os.path.splitext(fname)
+    flist = [f for f in os.listdir(fpath) if re.fullmatch(rf"{fname_no_ext}\(?\d*\)?{extension}", f)]
+    return fpath + os.sep + fname_no_ext + '(' + str(len(flist)) + ')' + extension

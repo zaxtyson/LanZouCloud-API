@@ -8,7 +8,7 @@ import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from random import shuffle, random, uniform
+from random import shuffle, uniform
 from time import sleep
 from typing import List
 
@@ -445,9 +445,9 @@ class LanZouCloud(object):
             link_info = link_info.json()
             second_page = remove_notes(second_page.text)
             # 提取文件信息
-            f_name = link_info['inf']
-            f_size = re.search(r'大小.+?(\d[\d.]+\s?[BKM]?)<', second_page)
-            f_size = f_size.group(1) if f_size else '0 M'
+            f_name = link_info['inf'].replace("*", "_")
+            f_size = re.search(r'大小.+?(\d[\d.,]+\s?[BKM]?)<', second_page)
+            f_size = f_size.group(1).replace(",", "") if f_size else '0 M'
             f_time = re.search(r'class="n_file_infos">(.+?)</span>', second_page)
             f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
             f_desc = re.search(r'class="n_box_des">(.*?)</div>', second_page)
@@ -461,13 +461,13 @@ class LanZouCloud(object):
                      re.search(r"var filename = '(.+?)';", first_page) or \
                      re.search(r'id="filenajax">(.+?)</div>', first_page) or \
                      re.search(r'<div class="b"><span>([^<>]+?)</span></div>', first_page)
-            f_name = f_name.group(1) if f_name else "未匹配到文件名"
+            f_name = f_name.group(1).replace("*", "_") if f_name else "未匹配到文件名"
             # 匹配文件时间，文件没有时间信息就视为今天，统一表示为 2020-01-01 格式
             f_time = re.search(r'>(\d+\s?[秒天分小][钟时]?前|[昨前]天\s?[\d:]+?|\d+\s?天前|\d{4}-\d\d-\d\d)<', first_page)
             f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
             # 匹配文件大小
-            f_size = re.search(r'大小.+?(\d[\d.]+\s?[BKM]?)<', first_page)
-            f_size = f_size.group(1) if f_size else '0 M'
+            f_size = re.search(r'大小.+?(\d[\d.,]+\s?[BKM]?)<', first_page)
+            f_size = f_size.group(1).replace(",", "") if f_size else '0 M'
             f_desc = re.search(r'文件描述.+?<br>\n?\s*(.*?)\s*</td>', first_page)
             f_desc = f_desc.group(1) if f_desc else ''
             first_page = self._get(self._host_url + para)
@@ -487,7 +487,7 @@ class LanZouCloud(object):
             link_info = link_info.json()
 
         # 这里开始获取文件直链
-        if link_info['zt'] != 1:    # 返回信息异常，无法获取直链
+        if link_info['zt'] != 1:  # 返回信息异常，无法获取直链
             return FileDetail(LanZouCloud.FAILED, name=f_name, time=f_time, size=f_size, desc=f_desc, pwd=pwd,
                               url=share_url)
 
@@ -918,8 +918,13 @@ class LanZouCloud(object):
                     failed_callback(code, filename)
         return LanZouCloud.SUCCESS
 
-    def down_file_by_url(self, share_url, pwd='', save_path='./Download', callback=None) -> int:
-        """通过分享链接下载文件(需提取码)"""
+    def down_file_by_url(self, share_url, pwd='', save_path='./Download', *, callback=None, overwrite=False,
+                         downloaded_handler=None) -> int:
+        """通过分享链接下载文件(需提取码)
+        :param callback 用于显示下载进度 callback(file_name, total_size, now_size)
+        :param overwrite 文件已存在时是否强制覆盖
+        :param downloaded_handler 下载完成后进一步处理文件的回调函数 downloaded_handle(file_path)
+        """
         if not is_file_url(share_url):
             return LanZouCloud.URL_INVALID
         if not os.path.exists(save_path):
@@ -936,13 +941,22 @@ class LanZouCloud(object):
         total_size = int(resp.headers['Content-Length'])
 
         file_path = save_path + os.sep + info.name
-        logger.debug(f'Save file to file_path={file_path}')
         if os.path.exists(file_path):
-            now_size = os.path.getsize(file_path)  # 本地已经下载的文件大小
-        else:
-            now_size = 0
+            if overwrite:
+                logger.debug(f"Overwrite file {file_path}")
+                os.remove(file_path)  # 删除旧文件
+            else:  # 自动重命名文件
+                file_path = auto_rename(file_path)
+                logger.debug(f"File has already exists, auto rename to {file_path}")
+
+        tmp_file_path = file_path + '.download'  # 正在下载中的文件名
+        logger.debug(f'Save file to {tmp_file_path}')
+
+        now_size = 0
         chunk_size = 4096
         last_512_bytes = b''  # 用于识别文件是否携带真实文件名信息
+        if os.path.exists(tmp_file_path):
+            now_size = os.path.getsize(tmp_file_path)  # 本地已经下载的文件大小
         headers = {**self._headers, 'Range': 'bytes=%d-' % now_size}
         resp = self._get(info.durl, stream=True, headers=headers)
 
@@ -951,7 +965,8 @@ class LanZouCloud(object):
         if resp.status_code == 416:  # 已经下载完成
             return LanZouCloud.SUCCESS
 
-        with open(file_path, "ab") as f:
+        with open(tmp_file_path, "ab") as f:
+            file_name = os.path.basename(file_path)
             for chunk in resp.iter_content(chunk_size):
                 if chunk:
                     f.write(chunk)
@@ -960,27 +975,34 @@ class LanZouCloud(object):
                     if total_size - now_size < 512:
                         last_512_bytes += chunk
                     if callback is not None:
-                        callback(info.name, total_size, now_size)
+                        callback(file_name, total_size, now_size)
+        os.rename(tmp_file_path, file_path)  # 下载完成，改回正常文件名
         # 尝试解析文件报尾
         file_info = un_serialize(last_512_bytes[-512:])
         if file_info is not None and 'padding' in file_info:  # 大文件的记录文件也可以反序列化出 name,但是没有 padding
-            real_name = file_info['name']
-            new_file_path = save_path + os.sep + real_name
+            real_name = file_info['name']  # 解除伪装的真实文件名
             logger.debug(f"Find meta info: real_name={real_name}")
-            if os.path.exists(new_file_path):
-                os.remove(new_file_path)  # 存在同名文件则删除
+            real_path = save_path + os.sep + real_name
+            if overwrite and os.path.exists(real_path):
+                os.remove(real_path)  # 删除原文件
+            new_file_path = auto_rename(real_path)
             os.rename(file_path, new_file_path)
             with open(new_file_path, 'rb+') as f:
                 f.seek(-512, 2)  # 截断最后 512 字节数据
                 f.truncate()
+            file_path = new_file_path  # 保存文件重命名后真实路径
+        if downloaded_handler is not None:
+            downloaded_handler(os.path.abspath(file_path))
         return LanZouCloud.SUCCESS
 
-    def down_file_by_id(self, fid, save_path='./Download', callback=None) -> int:
+    def down_file_by_id(self, fid, save_path='./Download', *, callback=None, overwrite=False,
+                        downloaded_handler=None) -> int:
         """登录用户通过id下载文件(无需提取码)"""
         info = self.get_share_info(fid, is_file=True)
         if info.code != LanZouCloud.SUCCESS:
             return info.code
-        return self.down_file_by_url(info.url, info.pwd, save_path, callback)
+        return self.down_file_by_url(info.url, info.pwd, save_path, callback=callback, overwrite=overwrite,
+                                     downloaded_handler=downloaded_handler)
 
     def get_folder_info_by_url(self, share_url, dir_pwd='') -> FolderDetail:
         """获取文件夹里所有文件的信息"""
@@ -1075,15 +1097,23 @@ class LanZouCloud(object):
         logger.debug(f"Big file checking: Failed")
         return None
 
-    def _down_big_file(self, name, total_size, file_list, save_path, *, callback=None):
+    def _down_big_file(self, name, total_size, file_list, save_path, *, callback=None, overwrite=False,
+                       downloaded_handler=None):
         """下载分段数据到一个文件，回调函数只显示一个文件
         支持大文件下载续传，下载完成后重复下载不会执行覆盖操作，直接返回状态码 SUCCESS
         """
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
         big_file = save_path + os.sep + name
         record_file = big_file + '.record'
 
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        if os.path.exists(big_file) and not os.path.exists(record_file):
+            if overwrite:
+                os.remove(big_file)  # 删除原文件
+            else:
+                big_file = auto_rename(big_file)
+                record_file = big_file + '.record'
 
         if not os.path.exists(record_file):  # 初始化记录文件
             info = {'last_ending': 0, 'finished': []}  # 记录上一个数据块结尾地址和已经下载的数据块
@@ -1095,6 +1125,7 @@ class LanZouCloud(object):
                 file_list = [f for f in file_list if f.name not in info['finished']]  # 排除已下载的数据块
                 logger.debug(f"Find download record file: {info}")
 
+        file_name = os.path.basename(big_file)
         with open(big_file, 'ab') as bf:
             for file in file_list:
                 try:
@@ -1114,32 +1145,38 @@ class LanZouCloud(object):
                 if resp is None:  # 网络错误, 没有响应数据
                     return LanZouCloud.FAILED
                 if resp.status_code == 416:  # 下载完成后重复下载导致 Range 越界, 服务器返回 416
-                    logger.debug(f"File {name} has already downloaded.")
+                    logger.debug(f"File {file_name} has already downloaded.")
                     os.remove(record_file)  # 删除记录文件
                     return LanZouCloud.SUCCESS
 
-                for chunk in resp.iter_content(4096):
-                    if chunk:
-                        file_size_now += len(chunk)
-                        bf.write(chunk)
-                        bf.flush()  # 确保缓冲区立即写入文件，否则下一次写入时获取的文件大小会有偏差
-                        if callback:
-                            callback(name, total_size, file_size_now)
-
-                # 一块数据写入完成，更新记录文件
-                info['finished'].append(file.name)
-                info['last_ending'] = file_size_now
-                with open(record_file, 'wb') as rf:
-                    pickle.dump(info, rf)
-                logger.debug(f"Update download record info: {info}")
+                try:
+                    for chunk in resp.iter_content(4096):
+                        if chunk:
+                            file_size_now += len(chunk)
+                            bf.write(chunk)
+                            bf.flush()  # 确保缓冲区立即写入文件，否则下一次写入时获取的文件大小会有偏差
+                            if callback:
+                                callback(file_name, total_size, file_size_now)
+                    # 一块数据写入完成，更新记录文件
+                    info['finished'].append(file.name)
+                finally:
+                    info['last_ending'] = file_size_now
+                    with open(record_file, 'wb') as rf:
+                        pickle.dump(info, rf)
+                    logger.debug(f"Update download record info: {info}")
             # 全部数据块下载完成, 记录文件可以删除
             logger.debug(f"Delete download record file: {record_file}")
             os.remove(record_file)
+
+        if downloaded_handler is not None:
+            downloaded_handler(os.path.abspath(big_file))
         return LanZouCloud.SUCCESS
 
     def down_dir_by_url(self, share_url, dir_pwd='', save_path='./Download', *, callback=None, mkdir=True,
-                        failed_callback=None) -> int:
+                        overwrite=False,
+                        failed_callback=None, downloaded_handler=None) -> int:
         """通过分享链接下载文件夹
+        :param overwrite: 下载时是否覆盖原文件, 对大文件也生效
         :param save_path 文件夹保存路径
         :param mkdir 是否在 save_path 下创建与远程文件夹同名的文件夹
         :param callback: 用于显示单个文件下载进度的回调函数
@@ -1150,6 +1187,7 @@ class LanZouCloud(object):
                         print(f"文件下载失败, 链接: {file.url},  错误码: code")
                     else:   # 登录后使用 ID 下载时
                         print(f"文件下载失败, ID: {file.id},  错误码: code")
+        :param downloaded_handler: 单个文件下载完成后进一步处理的回调函数 downloaded_handle(file_path)
         """
         folder_detail = self.get_folder_info_by_url(share_url, dir_pwd)
         if folder_detail.code != LanZouCloud.SUCCESS:  # 获取文件信息失败
@@ -1158,7 +1196,8 @@ class LanZouCloud(object):
         # 检查是否大文件分段数据
         info = self._check_big_file(folder_detail.files)
         if info is not None:
-            return self._down_big_file(*info, save_path, callback=callback)
+            return self._down_big_file(*info, save_path, callback=callback, overwrite=overwrite,
+                                       downloaded_handler=downloaded_handler)
 
         if mkdir:  # 自动创建子文件夹
             save_path = save_path + os.sep + folder_detail.folder.name
@@ -1167,7 +1206,8 @@ class LanZouCloud(object):
 
         # 不是大文件分段数据,直接下载
         for file in folder_detail.files:
-            code = self.down_file_by_url(file.url, dir_pwd, save_path, callback)
+            code = self.down_file_by_url(file.url, dir_pwd, save_path, callback=callback, overwrite=overwrite,
+                                         downloaded_handler=downloaded_handler)
             logger.debug(f'Download file result: Code:{code}, File: {file}')
             if code != LanZouCloud.SUCCESS:
                 if failed_callback is not None:
@@ -1175,8 +1215,8 @@ class LanZouCloud(object):
 
         return LanZouCloud.SUCCESS
 
-    def down_dir_by_id(self, folder_id, save_path='./Download', *, callback=None, mkdir=True,
-                       failed_callback=None) -> int:
+    def down_dir_by_id(self, folder_id, save_path='./Download', *, callback=None, mkdir=True, overwrite=False,
+                       failed_callback=None, downloaded_handler=None) -> int:
         """登录用户通过id下载文件夹"""
         file_list = self.get_file_list(folder_id)
         if len(file_list) == 0:
@@ -1185,7 +1225,8 @@ class LanZouCloud(object):
         # 检查是否大文件分段数据
         info = self._check_big_file(file_list)
         if info is not None:
-            return self._down_big_file(*info, save_path, callback=callback)
+            return self._down_big_file(*info, save_path, callback=callback, overwrite=overwrite,
+                                       downloaded_handler=downloaded_handler)
 
         if mkdir:  # 自动创建子目录
             share_info = self.get_share_info(folder_id, False)
@@ -1197,7 +1238,8 @@ class LanZouCloud(object):
                 os.makedirs(save_path)
 
         for file in file_list:
-            code = self.down_file_by_id(file.id, save_path, callback)
+            code = self.down_file_by_id(file.id, save_path, callback=callback, overwrite=overwrite,
+                                        downloaded_handler=downloaded_handler)
             logger.debug(f'Download file result: Code:{code}, File: {file}')
             if code != LanZouCloud.SUCCESS:
                 if failed_callback is not None:

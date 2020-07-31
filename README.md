@@ -35,7 +35,7 @@
 ## `v2.5.5`
 - 修复下载两个同名文件时断点续传功能异常的问题[#35](https://github.com/zaxtyson/LanZouCloud-API/issues/35#issue-668534695)
 - 下载函数新增 `overwrite` 参数，确定是否覆盖本地文件(默认不覆盖,自动重命名)
-- 下载函数新增 `downloaded_handler` 参数，可设置回调函数处理下载完成的文件, 具体见 [API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x06-%E4%B8%8A%E4%BC%A0%E5%92%8C%E4%B8%8B%E8%BD%BD#down_file_by_urlshare_url-pwd-save_path--callback-overwrite-downloaded_handler)
+- 下载函数新增 `downloaded_handler` 参数，可设置回调函数处理下载完成的文件, 具体见 [API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x06-%E4%B8%8A%E4%BC%A0%E5%92%8C%E4%B8%8B%E8%BD%BD-*#down_file_by_urlshare_url-pwd-save_path--callback-overwrite-downloaded_handler)
 - 修复蓝奏云将文件名敏感词([小姐](https://zaxtyson.lanzous.com/ic59zpg))替换为`*`导致无法创建文件的问题
 - 修复文件大小中出现 `,` 导致无法完整匹配文件大小的问题
 

@@ -352,9 +352,9 @@ class LanZouCloud(object):
             for file in resp["text"]:
                 file_list.append(File(
                     id=int(file['id']),
-                    name=file['name_all'],
+                    name=file['name_all'].replace("&amp;", "&"),
                     time=time_format(file['time']),  # 上传时间
-                    size=file['size'],  # 文件大小
+                    size=file['size'].replace(",", ""),  # 文件大小
                     type=file['name_all'].split('.')[-1],  # 文件类型
                     downs=int(file['downs']),  # 下载次数
                     has_pwd=True if int(file['onof']) == 1 else False,  # 是否存在提取码

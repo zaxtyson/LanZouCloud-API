@@ -32,6 +32,9 @@
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
+## `v2.5.6`
+- 修复文件删除后解析无效分享链接崩溃的问题 [#36](https://github.com/zaxtyson/LanZouCloud-API/issues/36#issue-674817998)
+
 ## `v2.5.5`
 - 修复下载两个同名文件时断点续传功能异常的问题[#35](https://github.com/zaxtyson/LanZouCloud-API/issues/35#issue-668534695)
 - 下载函数新增 `overwrite` 参数，确定是否覆盖本地文件(默认不覆盖,自动重命名)

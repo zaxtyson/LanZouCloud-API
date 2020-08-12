@@ -197,6 +197,9 @@ def auto_rename(file_path) -> str:
     if not os.path.exists(file_path):
         return file_path
     fpath, fname = os.path.split(file_path)
-    fname_no_ext, extension = os.path.splitext(fname)
-    flist = [f for f in os.listdir(fpath) if re.fullmatch(rf"{fname_no_ext}\(?\d*\)?{extension}", f)]
-    return fpath + os.sep + fname_no_ext + '(' + str(len(flist)) + ')' + extension
+    fname_no_ext, ext = os.path.splitext(fname)
+    flist = [f for f in os.listdir(fpath) if re.fullmatch(rf"{fname_no_ext}\(?\d*\)?{ext}", f)]
+    count = 1
+    while f"{fname_no_ext}({count}){ext}" in flist:
+        count += 1
+    return fpath + os.sep + fname_no_ext + '(' + str(count) + ')' + ext

@@ -34,6 +34,7 @@
 # 更新日志
 ## `v2.5.6`
 - 修复文件删除后解析无效分享链接崩溃的问题 [#36](https://github.com/zaxtyson/LanZouCloud-API/issues/36#issue-674817998)
+- 下载同名文件时重命名优化 [#37](https://github.com/zaxtyson/LanZouCloud-API/issues/37)
 
 ## `v2.5.5`
 - 修复下载两个同名文件时断点续传功能异常的问题[#35](https://github.com/zaxtyson/LanZouCloud-API/issues/35#issue-668534695)

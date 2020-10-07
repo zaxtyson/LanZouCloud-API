@@ -36,8 +36,8 @@
 ## `v2.5.7`
 - 修复 VIP 用户分享的递归文件夹无法下载的问题[#49](https://github.com/zaxtyson/LanZouCloud-CMD/issues/49)
 - 修复用户描述中带字符串`请输入密码`而文件没有设置提取码导致误判的问题
-- `get_folder_info_by_url()` 返回值中添加了子文件夹信息
-- `down_dir_by_id()` 和 `down_dir_by_url()` 函数增加参数 `recursive` 用于递归下载子文件夹
+- `get_folder_info_by_url()` 、`get_folder_info_by_id()` 返回值中添加了子文件夹信息, 见[API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x04-%E8%8E%B7%E5%8F%96%E6%96%87%E4%BB%B6(%E5%A4%B9)%E4%BF%A1%E6%81%AF#get_folder_info_by_urlshare_url-dir_pwd)
+- `down_dir_by_id()` 和 `down_dir_by_url()` 函数增加参数 `recursive` 用于递归下载子文件夹, 见[API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x06-%E4%B8%8A%E4%BC%A0%E5%92%8C%E4%B8%8B%E8%BD%BD#down_dir_by_urlshare_url-dir_pwd-save_path--mkdir-callback-failed_callback-overwrite-downloaded_handler-recursive)
 
 ## `v2.5.6`
 - 修复文件删除后解析无效分享链接崩溃的问题 [#36](https://github.com/zaxtyson/LanZouCloud-API/issues/36#issue-674817998)

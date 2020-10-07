@@ -1041,7 +1041,7 @@ class LanZouCloud(object):
         sub_folders = FolderList()
         # 文件夹描述放在 filesize 一栏, 迷惑行为
         all_sub_folders = re.findall(
-            r'mbxfolder"><a href="(.+?)".+class="filename">(.+?)<div class="filesize">(.+?)</div>', html)
+            r'mbxfolder"><a href="(.+?)".+class="filename">(.+?)<div class="filesize">(.*?)</div>', html)
         for url, name, desc in all_sub_folders:
             url = self._host_url + url
             time_str = datetime.today().strftime('%Y-%m-%d')  # 网页没有时间信息, 设置为今天

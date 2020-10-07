@@ -1,11 +1,13 @@
 import setuptools
 
+from lanzou.api import version
+
 with open("README.md", "r", encoding='utf8') as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="lanzou-api",
-    version="2.5.6",
+    version=version,
     author="zaxtyson",
     author_email="zaxtyson@foxmail.com",
     description="LanZouCloud API",

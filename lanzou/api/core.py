@@ -432,7 +432,7 @@ class LanZouCloud(object):
             return FileDetail(LanZouCloud.FILE_CANCELLED, pwd=pwd, url=share_url)
 
         # 这里获取下载直链 304 重定向前的链接
-        if '输入密码' in first_page:  # 文件设置了提取码时
+        if 'id="pwdload"' in first_page or 'id="passwddiv"' in first_page:  # 文件设置了提取码时
             if len(pwd) == 0:
                 return FileDetail(LanZouCloud.LACK_PASSWORD, pwd=pwd, url=share_url)  # 没给提取码直接退出
             # data : 'action=downprocess&sign=AGZRbwEwU2IEDQU6BDRUaFc8DzxfMlRjCjTPlVkWzFSYFY7ATpWYw_c_c&p='+pwd,
@@ -1012,9 +1012,10 @@ class LanZouCloud(object):
             html = requests.get(share_url, headers=self._headers).text
         except requests.RequestException:
             return FolderDetail(LanZouCloud.NETWORK_ERROR)
-        if '文件不存在' in html:
+        if '文件不存在' in html or '文件取消' in html:
             return FolderDetail(LanZouCloud.FILE_CANCELLED)
-        if '请输入密码' in html and len(dir_pwd) == 0:
+        # 要求输入密码, 用户描述中可能带有"输入密码",所以不用这个字符串判断
+        if ('id="pwdload"' in html or 'id="passwddiv"' in html) and len(dir_pwd) == 0:
             return FolderDetail(LanZouCloud.LACK_PASSWORD)
         try:
             # 获取文件需要的参数
@@ -1024,17 +1025,36 @@ class LanZouCloud(object):
             k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
             # 文件夹的信息
             folder_id = re.findall(r"'fid':'?(\d+)'?,", html)[0]
-            folder_name = re.findall(r"var.+?='(.+?)';\n.+document.title", html)[0]
-            folder_time = re.findall(r'class="rets">([\d\-]+?)<a', html)[0]  # 日期不全 %m-%d
-            folder_desc = re.findall(r'id="filename">(.+?)</span>', html)  # 无描述时无法完成匹配
-            folder_desc = folder_desc[0] if len(folder_desc) == 1 else ''
+            folder_name = re.findall(r"var.+?='(.+?)';\n.+document.title", html) or \
+                          re.findall(r'<div class="user-title">(.+?)</div>', html)
+            folder_name = folder_name[0]
+
+            folder_time = re.findall(r'class="rets">([\d\-]+?)<a', html)  # ['%m-%d'] 或者 None (vip自定义)
+            folder_time = folder_time[0] if folder_time else datetime.today().strftime("%m-%d")  # 没有就设为现在
+            folder_desc = re.findall(r'id="filename">(.+?)</span>', html) or \
+                          re.findall(r'<div class="user-radio-\d"></div>(.+?)</div>', html)
+            folder_desc = folder_desc[0] if folder_desc else ""
         except IndexError:
             return FolderDetail(LanZouCloud.FAILED)
 
+        # 提取子文件夹信息(vip用户分享的文件夹可以递归包含子文件夹)
+        sub_folders = FolderList()
+        # 文件夹描述放在 filesize 一栏, 迷惑行为
+        all_sub_folders = re.findall(
+            r'mbxfolder"><a href="(.+?)".+class="filename">(.+?)<div class="filesize">(.+?)</div>', html)
+        for url, name, desc in all_sub_folders:
+            url = self._host_url + url
+            time_str = datetime.today().strftime('%Y-%m-%d')  # 网页没有时间信息, 设置为今天
+            sub_folders.append(FolderInfo(name=name, desc=desc, url=url, time=time_str, pwd=dir_pwd))
+
+        # 提取改文件夹下全部文件
         page = 1
         files = FileList()
         while True:
+            if page >= 2:  # 连续的请求需要稍等一下
+                sleep(0.6)
             try:
+                logger.debug(f"Parse page {page}...")
                 post_data = {'lx': lx, 'pg': page, 'k': k, 't': t, 'fid': folder_id, 'pwd': dir_pwd}
                 resp = self._post(self._host_url + '/filemoreajax.php', data=post_data, headers=self._headers).json()
             except (requests.RequestException, AttributeError):
@@ -1058,14 +1078,15 @@ class LanZouCloud(object):
                 continue
             else:
                 return FolderDetail(LanZouCloud.FAILED)  # 其它未知错误
+
         # 通过文件的时间信息补全文件夹的年份(如果有文件的话)
         if files:  # 最后一个文件上传时间最早，文件夹的创建年份与其相同
             folder_time = files[-1].time.split('-')[0] + '-' + folder_time
         else:  # 可恶，没有文件，日期就设置为今年吧
             folder_time = datetime.today().strftime('%Y-%m-%d')
-        return FolderDetail(LanZouCloud.SUCCESS,
-                            FolderInfo(folder_name, folder_id, dir_pwd, folder_time, folder_desc, share_url),
-                            files)
+
+        this_folder = FolderInfo(folder_name, folder_id, dir_pwd, folder_time, folder_desc, share_url)
+        return FolderDetail(LanZouCloud.SUCCESS, this_folder, files, sub_folders)
 
     def get_folder_info_by_id(self, folder_id):
         """通过 id 获取文件夹及内部文件信息"""
@@ -1173,20 +1194,21 @@ class LanZouCloud(object):
         return LanZouCloud.SUCCESS
 
     def down_dir_by_url(self, share_url, dir_pwd='', save_path='./Download', *, callback=None, mkdir=True,
-                        overwrite=False,
+                        overwrite=False, recursive=False,
                         failed_callback=None, downloaded_handler=None) -> int:
         """通过分享链接下载文件夹
         :param overwrite: 下载时是否覆盖原文件, 对大文件也生效
         :param save_path 文件夹保存路径
         :param mkdir 是否在 save_path 下创建与远程文件夹同名的文件夹
-        :param callback: 用于显示单个文件下载进度的回调函数
+        :param callback 用于显示单个文件下载进度的回调函数
+        :param recursive 是否递归下载子文件夹(vip用户)
         :param failed_callback 用于处理下载失败文件的回调函数,
                 def failed_callback(code, file):
                     print(f"文件名: {file.name}, 时间: {file.time}, 大小: {file.size}, 类型: {file.type}")   # 共有属性
                     if hasattr(file, 'url'):    # 使用 URL 下载时
-                        print(f"文件下载失败, 链接: {file.url},  错误码: code")
+                        print(f"文件下载失败, 链接: {file.url},  错误码: {code}")
                     else:   # 登录后使用 ID 下载时
-                        print(f"文件下载失败, ID: {file.id},  错误码: code")
+                        print(f"文件下载失败, ID: {file.id},  错误码: {code}")
         :param downloaded_handler: 单个文件下载完成后进一步处理的回调函数 downloaded_handle(file_path)
         """
         folder_detail = self.get_folder_info_by_url(share_url, dir_pwd)
@@ -1213,10 +1235,18 @@ class LanZouCloud(object):
                 if failed_callback is not None:
                     failed_callback(code, file)
 
+        # 如果有子文件夹则递归下载子文件夹
+        if recursive and folder_detail.sub_folders:
+            for sub_folder in folder_detail.sub_folders:
+                self.down_dir_by_url(sub_folder.url, dir_pwd, save_path, callback=callback,
+                                     overwrite=overwrite,
+                                     recursive=True, failed_callback=failed_callback,
+                                     downloaded_handler=downloaded_handler)
+
         return LanZouCloud.SUCCESS
 
     def down_dir_by_id(self, folder_id, save_path='./Download', *, callback=None, mkdir=True, overwrite=False,
-                       failed_callback=None, downloaded_handler=None) -> int:
+                       failed_callback=None, downloaded_handler=None, recursive=False) -> int:
         """登录用户通过id下载文件夹"""
         file_list = self.get_file_list(folder_id)
         if len(file_list) == 0:
@@ -1244,5 +1274,13 @@ class LanZouCloud(object):
             if code != LanZouCloud.SUCCESS:
                 if failed_callback is not None:
                     failed_callback(code, file)
+
+        if recursive:
+            sub_folders = self.get_dir_list(folder_id)
+            if len(sub_folders) != 0:
+                for sub_folder in sub_folders:
+                    self.down_dir_by_id(sub_folder.id, save_path, callback=callback, overwrite=overwrite,
+                                        failed_callback=failed_callback, downloaded_handler=downloaded_handler,
+                                        recursive=True)
 
         return LanZouCloud.SUCCESS

@@ -32,6 +32,13 @@
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
+
+## `v2.5.7`
+- 修复 VIP 用户分享的递归文件夹无法下载的问题[#49](https://github.com/zaxtyson/LanZouCloud-CMD/issues/49)
+- 修复用户描述中带字符串`请输入密码`而文件没有设置提取码导致误判的问题
+- `get_folder_info_by_url()` 返回值中添加了子文件夹信息
+- `down_dir_by_id()` 和 `down_dir_by_url()` 函数增加参数 `recursive` 用于递归下载子文件夹
+
 ## `v2.5.6`
 - 修复文件删除后解析无效分享链接崩溃的问题 [#36](https://github.com/zaxtyson/LanZouCloud-API/issues/36#issue-674817998)
 - 下载同名文件时重命名优化 [#37](https://github.com/zaxtyson/LanZouCloud-API/issues/37)

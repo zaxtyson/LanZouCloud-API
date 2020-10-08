@@ -1224,6 +1224,7 @@ class LanZouCloud(object):
         if mkdir:  # 自动创建子文件夹
             save_path = save_path + os.sep + folder_detail.folder.name
             if not os.path.exists(save_path):
+                save_path = save_path.replace('*', '_')  # 替换特殊字符以符合路径规则
                 os.makedirs(save_path)
 
         # 不是大文件分段数据,直接下载

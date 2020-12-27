@@ -33,6 +33,10 @@
 
 # 更新日志
 
+## `v2.5.8`
+
+- 修复部分网络环境下无法工作的问题 [#44](https://github.com/zaxtyson/LanZouCloud-API/issues/44)
+
 ## `v2.5.7`
 - 修复 VIP 用户分享的递归文件夹无法下载的问题[#49](https://github.com/zaxtyson/LanZouCloud-CMD/issues/49)
 - 修复用户描述中带字符串`请输入密码`而文件没有设置提取码导致误判的问题

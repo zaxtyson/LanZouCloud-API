@@ -8,6 +8,7 @@ import pickle
 import re
 from datetime import timedelta, datetime
 from random import uniform, choices, sample, shuffle, choice
+
 import requests
 
 __all__ = ['logger', 'remove_notes', 'name_format', 'time_format', 'is_name_valid', 'is_file_url',
@@ -25,7 +26,7 @@ logger.addHandler(console)
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
-    'Referer': 'https://www.lanzous.com',
+    'Referer': 'https://pan.lanzous.com',
     'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 

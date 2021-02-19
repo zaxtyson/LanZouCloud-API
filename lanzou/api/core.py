@@ -95,8 +95,8 @@ class LanZouCloud(object):
 
     def login(self, username, passwd) -> int:
         """登录蓝奏云控制台"""
-        login_data = {"action": "login", "task": "login", "setSessionId": "", "setToken": "", "setSig": "",
-                      "setScene": "", "username": username, "password": passwd}
+        login_data = {"task": "3", "setSessionId": "", "setToken": "", "setSig": "",
+                      "setScene": "", "uid": username, "pwd": passwd}
         phone_header = {
             "User-Agent": "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/82.0.4051.0 Mobile Safari/537.36"}
         html = self._get(self._account_url)
@@ -106,10 +106,10 @@ class LanZouCloud(object):
         if not formhash:
             return LanZouCloud.FAILED
         login_data['formhash'] = formhash[0]
-        html = self._post(self._account_url, login_data, headers=phone_header)
+        html = self._post(self._mydisk_url, login_data, headers=phone_header)
         if not html:
             return LanZouCloud.NETWORK_ERROR
-        if '登录成功' in html.text:
+        if '成功' in html.json()['info']:
             self._cookies = html.cookies.get_dict()
             return LanZouCloud.SUCCESS
         else:

@@ -52,7 +52,7 @@ class LanZouCloud(object):
         self._cookies = None
         self._headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
-            'Referer': 'https://pan.lanzous.com',
+            'Referer': 'https://pc.woozooo.com/mydisk.php',
             'Accept-Language': 'zh-CN,zh;q=0.9',  # 提取直连必需设置这个，否则拿不到数据
         }
         disable_warnings(InsecureRequestWarning)  # 全局禁用 SSL 警告

@@ -64,11 +64,14 @@ def time_format(time_str: str) -> str:
 def is_name_valid(filename: str) -> bool:
     """检查文件名是否允许上传"""
 
-    valid_suffix_list = ('ppt', 'xapk', 'ke', 'azw', 'cpk', 'gho', 'dwg', 'db', 'docx', 'deb', 'e', 'ttf', 'xls', 'bat',
-                         'crx', 'rpm', 'txf', 'pdf', 'apk', 'ipa', 'txt', 'mobi', 'osk', 'dmg', 'rp', 'osz', 'jar',
-                         'ttc', 'z', 'w3x', 'xlsx', 'cetrainer', 'ct', 'rar', 'mp3', 'pptx', 'mobileconfig', 'epub',
-                         'imazingapp', 'doc', 'iso', 'img', 'appimage', '7z', 'rplib', 'lolgezi', 'exe', 'azw3', 'zip',
-                         'conf', 'tar', 'dll', 'flac', 'xpa', 'lua')
+    valid_suffix_list = (
+        'ppt', 'xapk', 'ke', 'azw', 'cpk', 'gho', 'dwg', 'db', 'docx', 'deb', 'e', 'ttf', 'xls', 'bat',
+        'crx', 'rpm', 'txf', 'pdf', 'apk', 'ipa', 'txt', 'mobi', 'osk', 'dmg', 'rp', 'osz', 'jar',
+        'ttc', 'z', 'w3x', 'xlsx', 'cetrainer', 'ct', 'rar', 'mp3', 'pptx', 'mobileconfig', 'epub',
+        'imazingapp', 'doc', 'iso', 'img', 'appimage', '7z', 'rplib', 'lolgezi', 'exe', 'azw3', 'zip',
+        'conf', 'tar', 'dll', 'flac', 'xpa', 'lua', 'cad', 'hwt', 'accdb', 'ce',
+        'xmind', 'enc', 'bds', 'bdi', 'ssf', 'it', 'gz'
+    )
 
     return filename.split('.')[-1] in valid_suffix_list
 
@@ -93,7 +96,7 @@ def is_file_url(share_url: str) -> bool:
 def is_folder_url(share_url: str) -> bool:
     """判断是否为文件夹的分享链接"""
     base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'
-    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/b[a-zA-Z0-9]{7,}/?'
+    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/(/s/)?b[a-zA-Z0-9]{7,}/?'
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):

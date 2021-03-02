@@ -27,21 +27,32 @@
 - **本项目没有任何担保**，如果您使用这些代码，您必需承担其带来的风险
 
 # API 文档
+
 - `dev` 分支用于修复错误，待稳定后再推到 `master` 分支
 - `master` 分支将自动发布到 PyPI，使用 `pip install lanzou-api` 即可安装
 - API 文档请查看 [wiki](https://github.com/zaxtyson/LanZouCloud-API/wiki) 页面
 
 # 更新日志
 
+## `v2.6.0`
+
+- 修复无法上传文件的问题 [#52](https://github.com/zaxtyson/LanZouCloud-API/pull/52)
+- 修复 `login()` 函数(只对某些用户有效) [#50](https://github.com/zaxtyson/LanZouCloud-API/pull/50)
+- 新增 11 种允许上传的文件格式[#90](https://github.com/rachpt/lanzou-gui/issues/90)
+- 修复会员自定义文件夹 URL 识别错误的问题[#84](https://github.com/rachpt/lanzou-gui/issues/84)
+
 ## `v2.5.8`
 
 - 修复部分网络环境下无法工作的问题 [#44](https://github.com/zaxtyson/LanZouCloud-API/issues/44)
 
 ## `v2.5.7`
+
 - 修复 VIP 用户分享的递归文件夹无法下载的问题[#49](https://github.com/zaxtyson/LanZouCloud-CMD/issues/49)
 - 修复用户描述中带字符串`请输入密码`而文件没有设置提取码导致误判的问题
-- `get_folder_info_by_url()` 、`get_folder_info_by_id()` 返回值中添加了子文件夹信息, 见[API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x04-%E8%8E%B7%E5%8F%96%E6%96%87%E4%BB%B6(%E5%A4%B9)%E4%BF%A1%E6%81%AF#get_folder_info_by_urlshare_url-dir_pwd)
-- `down_dir_by_id()` 和 `down_dir_by_url()` 函数增加参数 `recursive` 用于递归下载子文件夹, 见[API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x06-%E4%B8%8A%E4%BC%A0%E5%92%8C%E4%B8%8B%E8%BD%BD#down_dir_by_urlshare_url-dir_pwd-save_path--mkdir-callback-failed_callback-overwrite-downloaded_handler-recursive)
+- `get_folder_info_by_url()` 、`get_folder_info_by_id()` 返回值中添加了子文件夹信息,
+  见[API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x04-%E8%8E%B7%E5%8F%96%E6%96%87%E4%BB%B6(%E5%A4%B9)%E4%BF%A1%E6%81%AF#get_folder_info_by_urlshare_url-dir_pwd)
+- `down_dir_by_id()` 和 `down_dir_by_url()` 函数增加参数 `recursive` 用于递归下载子文件夹,
+  见[API文档](https://github.com/zaxtyson/LanZouCloud-API/wiki/0x06-%E4%B8%8A%E4%BC%A0%E5%92%8C%E4%B8%8B%E8%BD%BD#down_dir_by_urlshare_url-dir_pwd-save_path--mkdir-callback-failed_callback-overwrite-downloaded_handler-recursive)
 
 ## `v2.5.6`
 - 修复文件删除后解析无效分享链接崩溃的问题 [#36](https://github.com/zaxtyson/LanZouCloud-API/issues/36#issue-674817998)

@@ -94,7 +94,10 @@ class LanZouCloud(object):
         return LanZouCloud.FAILED
 
     def login(self, username, passwd) -> int:
-        """登录蓝奏云控制台"""
+        """
+        登录蓝奏云控制台[已弃用]
+        对某些用户可能有用
+        """
         login_data = {"task": "3", "setSessionId": "", "setToken": "", "setSig": "",
                       "setScene": "", "uid": username, "pwd": passwd}
         phone_header = {
@@ -109,10 +112,13 @@ class LanZouCloud(object):
         html = self._post(self._mydisk_url, login_data, headers=phone_header)
         if not html:
             return LanZouCloud.NETWORK_ERROR
-        if '成功' in html.json()['info']:
-            self._cookies = html.cookies.get_dict()
-            return LanZouCloud.SUCCESS
-        else:
+        try:
+            if '成功' in html.json()['info']:
+                self._cookies = html.cookies.get_dict()
+                return LanZouCloud.SUCCESS
+            else:
+                return LanZouCloud.FAILED
+        except ValueError:
             return LanZouCloud.FAILED
 
     def get_cookie(self) -> dict:
@@ -565,9 +571,12 @@ class LanZouCloud(object):
         return ShareInfo(LanZouCloud.SUCCESS, name=name, url=url, desc=desc, pwd=pwd)
 
     def set_passwd(self, fid, passwd='', is_file=True) -> int:
-        """设置网盘文件(夹)的提取码"""
-        # id 无效或者 id 类型不对应仍然返回成功 :(
-        # 文件夹提取码长度 0-12 位  文件提取码 2-6 位
+        """
+        设置网盘文件(夹)的提取码, 现在非会员用户不允许关闭提取码
+        id 无效或者 id 类型不对应仍然返回成功 :(
+        文件夹提取码长度 0-12 位  文件提取码 2-6 位
+        """
+
         passwd_status = 0 if passwd == '' else 1  # 是否开启密码
         if is_file:
             post_data = {"task": 23, "file_id": fid, "shows": passwd_status, "shownames": passwd}

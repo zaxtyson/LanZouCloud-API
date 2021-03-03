@@ -947,8 +947,26 @@ class LanZouCloud(object):
         resp = self._get(info.durl, stream=True)
         if not resp:
             return LanZouCloud.FAILED
-        total_size = int(resp.headers['Content-Length'])
 
+        content_length = resp.headers.get('Content-Length', None)
+        # 如果无法获取 Content-Length, 先读取一点数据, 再尝试获取一次
+        # 通常只需读取 1 字节数据
+        data_iter = resp.iter_content(chunk_size=1)
+        while not content_length:
+            logger.warning("Not found Content-Length in response headers")
+            logger.debug("Read 1 byte from stream...")
+            try:
+                next(data_iter)
+            except StopIteration:
+                logger.debug("Please wait for a moment before downloading")
+                return LanZouCloud.FAILED
+            resp_ = self._get(info.durl, stream=True)
+            if not resp_:
+                return LanZouCloud.FAILED
+            content_length = resp_.headers.get('Content-Length', None)
+            logger.debug(f"Content-Length: {content_length}")
+
+        total_size = int(content_length)
         file_path = save_path + os.sep + info.name
         if os.path.exists(file_path):
             if overwrite:

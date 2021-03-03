@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.1`
+
+- 修复下载某些 txt 文件失败的问题[#53](https://github.com/zaxtyson/LanZouCloud-API/issues/53)
+
 ## `v2.6.0`
 
 - 修复无法上传文件的问题 [#52](https://github.com/zaxtyson/LanZouCloud-API/pull/52)

@@ -380,7 +380,7 @@ class LanZouCloud(object):
                 Folder(
                     id=int(folder['fol_id']),
                     name=folder['name'],
-                    has_pwd=True if folder['onof'] == 1 else False,
+                    has_pwd=True if int(folder['onof']) == 1 else False,
                     desc=folder['folder_des'].strip('[]')
                 ))
         return folder_list

@@ -37,6 +37,7 @@
 ## `v2.6.1`
 
 - 修复下载某些 txt 文件失败的问题[#53](https://github.com/zaxtyson/LanZouCloud-API/issues/53)
+- 修复*判断文件(夹)是否存在提取码*功能异常的问题
 
 ## `v2.6.0`
 

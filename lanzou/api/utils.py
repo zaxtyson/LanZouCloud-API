@@ -73,7 +73,7 @@ def is_name_valid(filename: str) -> bool:
         'xmind', 'enc', 'bds', 'bdi', 'ssf', 'it', 'gz'
     )
 
-    return filename.split('.')[-1] in valid_suffix_list
+    return filename.split('.')[-1].lower() in valid_suffix_list
 
 
 def is_file_url(share_url: str) -> bool:

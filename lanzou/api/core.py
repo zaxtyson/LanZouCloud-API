@@ -433,6 +433,16 @@ class LanZouCloud(object):
         if not first_page:
             return FileDetail(LanZouCloud.NETWORK_ERROR, pwd=pwd, url=share_url)
 
+        if "var arg1=" in first_page.text:
+            # 在页面被过多访问或其他情况下，有时候会先返回一个加密的页面，其执行计算出一个acw_sc__v2后放入页面后再重新访问页面才能获得正常页面
+            # 若该页面进行了js加密，则进行解密，计算acw_sc__v2，并加入cookie
+            # 可以测试的链接：https://fzls.lanzous.com/iDBM7nbkzti ，使用隐私模式打开（确保无cookie），会注意到第一次访问时会返回形如下面这样的页面，会计算acw_sc__v2并设置cookie后reload，之后会返回正常的页面
+            acw_sc__v2 = calc_acw_sc__v2(first_page.text)
+            self._session.cookies.set("acw_sc__v2", acw_sc__v2)
+            first_page = self._get(share_url)  # 文件分享页面(第一页)
+            if not first_page:
+                return FileDetail(LanZouCloud.NETWORK_ERROR, pwd=pwd, url=share_url)
+
         first_page = remove_notes(first_page.text)  # 去除网页里的注释
         if '文件取消' in first_page or '文件不存在' in first_page:
             return FileDetail(LanZouCloud.FILE_CANCELLED, pwd=pwd, url=share_url)

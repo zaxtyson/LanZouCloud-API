@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.3`
+
+- 修复下载页的 Cookie 验证问题[#55](https://github.com/zaxtyson/LanZouCloud-API/pull/55)
+
 ## `v2.6.2`
 
 - 修复文件后缀非小写导致的误判问题[#92](https://github.com/rachpt/lanzou-gui/issues/92)

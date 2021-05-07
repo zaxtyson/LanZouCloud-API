@@ -1068,6 +1068,15 @@ class LanZouCloud(object):
         # 要求输入密码, 用户描述中可能带有"输入密码",所以不用这个字符串判断
         if ('id="pwdload"' in html or 'id="passwddiv"' in html) and len(dir_pwd) == 0:
             return FolderDetail(LanZouCloud.LACK_PASSWORD)
+
+        if "acw_sc__v2" in html:
+            # 在页面被过多访问或其他情况下，有时候会先返回一个加密的页面，其执行计算出一个acw_sc__v2后放入页面后再重新访问页面才能获得正常页面
+            # 若该页面进行了js加密，则进行解密，计算acw_sc__v2，并加入cookie
+            acw_sc__v2 = calc_acw_sc__v2(html)
+            self._session.cookies.set("acw_sc__v2", acw_sc__v2)
+            logger.debug(f"Set Cookie: acw_sc__v2={acw_sc__v2}")
+            html = self._get(share_url).text  # 文件分享页面(第一页)
+
         try:
             # 获取文件需要的参数
             html = remove_notes(html)

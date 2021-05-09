@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.4`
+
+- 修复无法获取分享文件夹信息的问题[#58](https://github.com/zaxtyson/LanZouCloud-API/pull/58)
+
 ## `v2.6.3`
 
 - 修复下载页的 Cookie 验证问题[#55](https://github.com/zaxtyson/LanZouCloud-API/pull/55)

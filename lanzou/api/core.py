@@ -958,25 +958,8 @@ class LanZouCloud(object):
         if not resp:
             return LanZouCloud.FAILED
 
-        content_length = resp.headers.get('Content-Length', None)
-        # 如果无法获取 Content-Length, 先读取一点数据, 再尝试获取一次
-        # 通常只需读取 1 字节数据
-        data_iter = resp.iter_content(chunk_size=1)
-        while not content_length:
-            logger.warning("Not found Content-Length in response headers")
-            logger.debug("Read 1 byte from stream...")
-            try:
-                next(data_iter)
-            except StopIteration:
-                logger.debug("Please wait for a moment before downloading")
-                return LanZouCloud.FAILED
-            resp_ = self._get(info.durl, stream=True)
-            if not resp_:
-                return LanZouCloud.FAILED
-            content_length = resp_.headers.get('Content-Length', None)
-            logger.debug(f"Content-Length: {content_length}")
-
-        total_size = int(content_length)
+        # 如果本地存在同名文件且设置了 overwrite, 则覆盖原文件
+        # 否则修改下载文件路径, 自动在文件名后加序号
         file_path = save_path + os.sep + info.name
         if os.path.exists(file_path):
             if overwrite:
@@ -989,9 +972,33 @@ class LanZouCloud(object):
         tmp_file_path = file_path + '.download'  # 正在下载中的文件名
         logger.debug(f'Save file to {tmp_file_path}')
 
+        # 对于 txt 文件, 可能出现没有 Content-Length 的情况
+        # 此时文件需要下载一次才会出现 Content-Length
+        # 这时候我们先读取一点数据, 再尝试获取一次, 通常只需读取 1 字节数据
+        content_length = resp.headers.get('Content-Length', None)
+        if not content_length:
+            data_iter = resp.iter_content(chunk_size=1)
+            max_retries = 5  # 5 次拿不到就算了
+            while not content_length and max_retries > 0:
+                max_retries -= 1
+                logger.warning("Not found Content-Length in response headers")
+                logger.debug("Read 1 byte from stream...")
+                try:
+                    next(data_iter)  # 读取一个字节
+                except StopIteration:
+                    logger.debug("Please wait for a moment before downloading")
+                    return LanZouCloud.FAILED
+                resp_ = self._get(info.durl, stream=True)  # 再请求一次试试
+                if not resp_:
+                    return LanZouCloud.FAILED
+                content_length = resp_.headers.get('Content-Length', None)
+                logger.debug(f"Content-Length: {content_length}")
+
+        if not content_length:
+            return LanZouCloud.FAILED  # 应该不会出现这种情况
+
+        # 支持断点续传下载
         now_size = 0
-        chunk_size = 4096
-        last_512_bytes = b''  # 用于识别文件是否携带真实文件名信息
         if os.path.exists(tmp_file_path):
             now_size = os.path.getsize(tmp_file_path)  # 本地已经下载的文件大小
         headers = {**self._headers, 'Range': 'bytes=%d-' % now_size}
@@ -1004,30 +1011,43 @@ class LanZouCloud(object):
 
         with open(tmp_file_path, "ab") as f:
             file_name = os.path.basename(file_path)
-            for chunk in resp.iter_content(chunk_size):
+            for chunk in resp.iter_content(4096):
                 if chunk:
                     f.write(chunk)
                     f.flush()
                     now_size += len(chunk)
-                    if total_size - now_size < 512:
-                        last_512_bytes += chunk
                     if callback is not None:
-                        callback(file_name, total_size, now_size)
+                        callback(file_name, int(content_length), now_size)
+
+        # 文件下载完成后, 检查文件尾部 512 字节数据
+        # 绕过官方限制上传时, API 会隐藏文件真实信息到文件尾部
+        # 这里尝试提取隐藏信息, 并截断文件尾部数据
         os.rename(tmp_file_path, file_path)  # 下载完成，改回正常文件名
-        # 尝试解析文件报尾
-        file_info = un_serialize(last_512_bytes[-512:])
-        if file_info is not None and 'padding' in file_info:  # 大文件的记录文件也可以反序列化出 name,但是没有 padding
-            real_name = file_info['name']  # 解除伪装的真实文件名
-            logger.debug(f"Find meta info: real_name={real_name}")
-            real_path = save_path + os.sep + real_name
-            if overwrite and os.path.exists(real_path):
-                os.remove(real_path)  # 删除原文件
-            new_file_path = auto_rename(real_path)
-            os.rename(file_path, new_file_path)
-            with open(new_file_path, 'rb+') as f:
-                f.seek(-512, 2)  # 截断最后 512 字节数据
-                f.truncate()
-            file_path = new_file_path  # 保存文件重命名后真实路径
+        if os.path.getsize(file_path) > 512:  # 文件大于 512 bytes 就检查一下
+            file_info = None
+            with open(file_path, 'rb') as f:
+                f.seek(-512, os.SEEK_END)
+                last_512_bytes = f.read()
+                file_info = un_serialize(last_512_bytes)
+
+            # 大文件的记录文件也可以反序列化出 name,但是没有 padding 字段
+            if file_info is not None and 'padding' in file_info:
+                real_name = file_info['name']  # 解除伪装的真实文件名
+                logger.debug(f"Find meta info: real_name={real_name}")
+                real_path = save_path + os.sep + real_name
+                # 如果存在同名文件且设置了 overwrite, 删掉原文件
+                if overwrite and os.path.exists(real_path):
+                    os.remove(real_path)
+                # 自动重命名, 文件存在就会加个序号
+                new_file_path = auto_rename(real_path)
+                os.rename(file_path, new_file_path)
+                # 截断最后 512 字节隐藏信息, 还原文件
+                with open(new_file_path, 'rb+') as f:
+                    f.seek(-512, os.SEEK_END)
+                    f.truncate()
+                file_path = new_file_path  # 保存文件重命名后真实路径
+
+        # 如果设置了下载完成的回调函数, 调用之
         if downloaded_handler is not None:
             downloaded_handler(os.path.abspath(file_path))
         return LanZouCloud.SUCCESS
@@ -1054,6 +1074,15 @@ class LanZouCloud(object):
         # 要求输入密码, 用户描述中可能带有"输入密码",所以不用这个字符串判断
         if ('id="pwdload"' in html or 'id="passwddiv"' in html) and len(dir_pwd) == 0:
             return FolderDetail(LanZouCloud.LACK_PASSWORD)
+
+        if "acw_sc__v2" in html:
+            # 在页面被过多访问或其他情况下，有时候会先返回一个加密的页面，其执行计算出一个acw_sc__v2后放入页面后再重新访问页面才能获得正常页面
+            # 若该页面进行了js加密，则进行解密，计算acw_sc__v2，并加入cookie
+            acw_sc__v2 = calc_acw_sc__v2(html)
+            self._session.cookies.set("acw_sc__v2", acw_sc__v2)
+            logger.debug(f"Set Cookie: acw_sc__v2={acw_sc__v2}")
+            html = self._get(share_url).text  # 文件分享页面(第一页)
+
         try:
             # 获取文件需要的参数
             html = remove_notes(html)
@@ -1144,6 +1173,7 @@ class LanZouCloud(object):
                 logger.debug(f"Big file checking: Failed")
                 return None
             resp = self._get(info.durl)
+            # 这里无需知道 txt 文件的 Content-Length, 全部读取即可
             info = un_serialize(resp.content) if resp else None
             if info is not None:  # 确认是大文件
                 name, size, *_, parts = info.values()  # 真实文件名, 文件字节大小, (其它数据),分段数据文件名(有序)

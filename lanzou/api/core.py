@@ -79,18 +79,33 @@ class LanZouCloud(object):
 
         return None
 
-    def all_possiable_urls(self, lanzouyun_url: str) -> List[str]:
+    def all_possiable_urls(self, lanzouyun_url:str)-> List[str]:
         if self._host_url not in lanzouyun_url:
             return [lanzouyun_url]
 
         old_domain = 'pan.lanzous'
 
-        domains = [lanzouyun_url]
-        for sub_domain in ['pan', 'up', 'wws', 'www', 'wwx']:
-            for main_domain in ['lanzoux', 'lanzous', 'lanzouxi']:
-                new_url = lanzouyun_url.replace(old_domain, f'{sub_domain}.{main_domain}')
-                domains.append(new_url)
-        return domains
+        return [
+            # 目前网盘默认分享链接是这个，后面可以根据哪个最靠谱，调整顺序
+            lanzouyun_url.replace(old_domain, 'wwx.lanzoui'),
+
+            lanzouyun_url.replace(old_domain, 'pan.lanzous'),
+            lanzouyun_url.replace(old_domain, 'up.lanzous'),
+            lanzouyun_url.replace(old_domain, 'wws.lanzous'),
+            lanzouyun_url.replace(old_domain, 'www.lanzous'),
+            lanzouyun_url.replace(old_domain, 'wwx.lanzous'),
+
+            lanzouyun_url.replace(old_domain, 'pan.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'up.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'wws.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'www.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'wwx.lanzoux'),
+
+            lanzouyun_url.replace(old_domain, 'pan.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'up.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'wws.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'www.lanzoui'),
+        ]
 
     def ignore_limits(self):
         """解除官方限制"""

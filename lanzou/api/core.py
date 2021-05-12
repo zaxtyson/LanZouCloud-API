@@ -79,25 +79,18 @@ class LanZouCloud(object):
 
         return None
 
-    def all_possiable_urls(self, lanzouyun_url:str)-> List[str]:
+    def all_possiable_urls(self, lanzouyun_url: str) -> List[str]:
         if self._host_url not in lanzouyun_url:
             return [lanzouyun_url]
 
         old_domain = 'pan.lanzous'
-        return [
-            lanzouyun_url,
 
-            lanzouyun_url.replace(old_domain, 'pan.lanzoux'),
-            lanzouyun_url.replace(old_domain, 'wws.lanzoux'),
-            lanzouyun_url.replace(old_domain, 'www.lanzoux'),
-            lanzouyun_url.replace(old_domain, 'wwx.lanzoux'),
-
-            lanzouyun_url.replace(old_domain, 'wws.lanzous'),
-            lanzouyun_url.replace(old_domain, 'www.lanzous'),
-            lanzouyun_url.replace(old_domain, 'wwx.lanzous'),
-
-            lanzouyun_url.replace(old_domain, 'up.lanzoui'),
-        ]
+        domains = [lanzouyun_url]
+        for sub_domain in ['pan', 'up', 'wws', 'www', 'wwx']:
+            for main_domain in ['lanzoux', 'lanzous', 'lanzouxi']:
+                new_url = lanzouyun_url.replace(old_domain, f'{sub_domain}.{main_domain}')
+                domains.append(new_url)
+        return domains
 
     def ignore_limits(self):
         """解除官方限制"""

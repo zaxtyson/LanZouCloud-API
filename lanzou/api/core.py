@@ -92,11 +92,11 @@ class LanZouCloud(object):
             # 目前网盘默认分享链接是这个，后面可以根据经验，哪个最靠谱，调整先后顺序
             lanzouyun_url.replace(old_domain, 'wwx.lanzoui'),
 
-            lanzouyun_url.replace(old_domain, 'pan.lanzous'),
-            lanzouyun_url.replace(old_domain, 'up.lanzous'),
-            lanzouyun_url.replace(old_domain, 'wws.lanzous'),
-            lanzouyun_url.replace(old_domain, 'www.lanzous'),
-            lanzouyun_url.replace(old_domain, 'wwx.lanzous'),
+            # 本地测试当前可用的域名，后续可以调整
+            lanzouyun_url.replace(old_domain, 'pan.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'up.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'wws.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'www.lanzoui'),
 
             lanzouyun_url.replace(old_domain, 'pan.lanzoux'),
             lanzouyun_url.replace(old_domain, 'up.lanzoux'),
@@ -104,10 +104,13 @@ class LanZouCloud(object):
             lanzouyun_url.replace(old_domain, 'www.lanzoux'),
             lanzouyun_url.replace(old_domain, 'wwx.lanzoux'),
 
-            lanzouyun_url.replace(old_domain, 'pan.lanzoui'),
-            lanzouyun_url.replace(old_domain, 'up.lanzoui'),
-            lanzouyun_url.replace(old_domain, 'wws.lanzoui'),
-            lanzouyun_url.replace(old_domain, 'www.lanzoui'),
+            lanzouyun_url.replace(old_domain, 'wwx.lanzous'),
+
+            # 其余备用的域名，测试时暂时不可用
+            lanzouyun_url.replace(old_domain, 'pan.lanzous'),
+            lanzouyun_url.replace(old_domain, 'up.lanzous'),
+            lanzouyun_url.replace(old_domain, 'wws.lanzous'),
+            lanzouyun_url.replace(old_domain, 'www.lanzous'),
         ]
 
     def ignore_limits(self):

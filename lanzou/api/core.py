@@ -86,7 +86,10 @@ class LanZouCloud(object):
         old_domain = 'pan.lanzous'
 
         return [
-            # 目前网盘默认分享链接是这个，后面可以根据哪个最靠谱，调整顺序
+            # 首先尝试传入的url
+            lanzouyun_url,
+
+            # 目前网盘默认分享链接是这个，后面可以根据经验，哪个最靠谱，调整先后顺序
             lanzouyun_url.replace(old_domain, 'wwx.lanzoui'),
 
             lanzouyun_url.replace(old_domain, 'pan.lanzous'),

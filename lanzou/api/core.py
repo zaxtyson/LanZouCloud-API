@@ -58,20 +58,46 @@ class LanZouCloud(object):
         disable_warnings(InsecureRequestWarning)  # 全局禁用 SSL 警告
 
     def _get(self, url, **kwargs):
-        try:
-            kwargs.setdefault('timeout', self._timeout)
-            kwargs.setdefault('headers', self._headers)
-            return self._session.get(url, verify=False, **kwargs)
-        except (ConnectionError, requests.RequestException):
-            return None
+        for possiable_url in self.all_possiable_urls(url):
+            try:
+                kwargs.setdefault('timeout', self._timeout)
+                kwargs.setdefault('headers', self._headers)
+                return self._session.get(possiable_url, verify=False, **kwargs)
+            except (ConnectionError, requests.RequestException):
+                logger.debug(f"_get({possiable_url}) failed, try another domain")
+
+        return None
 
     def _post(self, url, data, **kwargs):
-        try:
-            kwargs.setdefault('timeout', self._timeout)
-            kwargs.setdefault('headers', self._headers)
-            return self._session.post(url, data, verify=False, **kwargs)
-        except (ConnectionError, requests.RequestException):
-            return None
+        for possiable_url in self.all_possiable_urls(url):
+            try:
+                kwargs.setdefault('timeout', self._timeout)
+                kwargs.setdefault('headers', self._headers)
+                return self._session.post(possiable_url, data, verify=False, **kwargs)
+            except (ConnectionError, requests.RequestException):
+                logger.debug(f"_post({possiable_url}, {data}) failed, try another domain")
+
+        return None
+
+    def all_possiable_urls(self, lanzouyun_url:str)-> List[str]:
+        if self._host_url not in lanzouyun_url:
+            return [lanzouyun_url]
+
+        old_domain = 'pan.lanzous'
+        return [
+            lanzouyun_url,
+
+            lanzouyun_url.replace(old_domain, 'pan.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'wws.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'www.lanzoux'),
+            lanzouyun_url.replace(old_domain, 'wwx.lanzoux'),
+
+            lanzouyun_url.replace(old_domain, 'wws.lanzous'),
+            lanzouyun_url.replace(old_domain, 'www.lanzous'),
+            lanzouyun_url.replace(old_domain, 'wwx.lanzous'),
+
+            lanzouyun_url.replace(old_domain, 'up.lanzoui'),
+        ]
 
     def ignore_limits(self):
         """解除官方限制"""

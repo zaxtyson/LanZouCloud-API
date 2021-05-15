@@ -1082,7 +1082,7 @@ class LanZouCloud(object):
         if is_file_url(share_url):
             return FolderDetail(LanZouCloud.URL_INVALID)
         try:
-            html = requests.get(share_url, headers=self._headers).text
+            html = self._get(share_url, headers=self._headers).text
         except requests.RequestException:
             return FolderDetail(LanZouCloud.NETWORK_ERROR)
         if '文件不存在' in html or '文件取消' in html:

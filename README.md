@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.5`
+
+- 修复蓝奏云主域名解析异常的问题[#59](https://github.com/zaxtyson/LanZouCloud-API/issues/59) [#60](https://github.com/zaxtyson/LanZouCloud-API/pull/60)
+
 ## `v2.6.4`
 
 - 修复无法获取分享文件夹信息的问题[#58](https://github.com/zaxtyson/LanZouCloud-API/pull/58)

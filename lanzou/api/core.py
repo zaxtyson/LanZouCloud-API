@@ -45,7 +45,7 @@ class LanZouCloud(object):
         self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
         self._upload_delay = (0, 0)  # 文件上传延时
-        self._host_url = 'https://pan.lanzous.com'
+        self._host_url = 'https://pan.lanzoui.com'
         self._doupload_url = 'https://pc.woozooo.com/doupload.php'
         self._account_url = 'https://pc.woozooo.com/account.php'
         self._mydisk_url = 'https://pc.woozooo.com/mydisk.php'
@@ -58,20 +58,36 @@ class LanZouCloud(object):
         disable_warnings(InsecureRequestWarning)  # 全局禁用 SSL 警告
 
     def _get(self, url, **kwargs):
-        try:
-            kwargs.setdefault('timeout', self._timeout)
-            kwargs.setdefault('headers', self._headers)
-            return self._session.get(url, verify=False, **kwargs)
-        except (ConnectionError, requests.RequestException):
-            return None
+        for possible_url in self._all_possible_urls(url):
+            try:
+                kwargs.setdefault('timeout', self._timeout)
+                kwargs.setdefault('headers', self._headers)
+                return self._session.get(possible_url, verify=False, **kwargs)
+            except (ConnectionError, requests.RequestException):
+                logger.debug(f"Get {possible_url} failed, try another domain")
+
+        return None
 
     def _post(self, url, data, **kwargs):
-        try:
-            kwargs.setdefault('timeout', self._timeout)
-            kwargs.setdefault('headers', self._headers)
-            return self._session.post(url, data, verify=False, **kwargs)
-        except (ConnectionError, requests.RequestException):
-            return None
+        for possible_url in self._all_possible_urls(url):
+            try:
+                kwargs.setdefault('timeout', self._timeout)
+                kwargs.setdefault('headers', self._headers)
+                return self._session.post(possible_url, data, verify=False, **kwargs)
+            except (ConnectionError, requests.RequestException):
+                logger.debug(f"Post to {possible_url} ({data}) failed, try another domain")
+
+        return None
+
+    @staticmethod
+    def _all_possible_urls(url: str) -> List[str]:
+        """蓝奏云的主域名有时会挂掉, 此时尝试切换到备用域名"""
+        available_domains = [
+            'lanzoui.com',  # 鲁ICP备15001327号-6, 2020-06-09, SEO 排名最低
+            'lanzoux.com',  # 鲁ICP备15001327号-5, 2020-06-09
+            'lanzous.com'  # 主域名, 备案异常, 部分地区已经无法访问
+        ]
+        return [url.replace('lanzous.com', d) for d in available_domains]
 
     def ignore_limits(self):
         """解除官方限制"""

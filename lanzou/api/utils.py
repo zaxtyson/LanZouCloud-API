@@ -112,6 +112,15 @@ def is_folder_url(share_url: str) -> bool:
 
 def un_serialize(data: bytes):
     """反序列化文件信息数据"""
+    # https://github.com/zaxtyson/LanZouCloud-API/issues/65
+    is_right_format = False
+    if data.startswith(b"\x80\x04") and data.endswith(b"u."):
+        is_right_format = True
+    if data.startswith(b"\x80\x03") and data.endswith(b"u."):
+        is_right_format = True
+
+    if not is_right_format:
+        return None
     try:
         ret = pickle.loads(data)
         if not isinstance(ret, dict):
@@ -189,9 +198,10 @@ def let_me_upload(file_path):
                 chunk = in_f.read(4096)
         # 构建文件 "报尾" 保存真实文件名,大小 512 字节
         # 追加数据到文件尾部，并不会影响文件的使用，无需修改即可分享给其他人使用，自己下载时则会去除，确保数据无误
-        padding = 512 - len(file_name.encode('utf-8')) - 42  # 序列化后空字典占 42 字节
+        # protocol=4（py3.8默认), 序列化后空字典占 42 字节
+        padding = 512 - len(file_name.encode('utf-8')) - 42
         data = {'name': file_name, 'padding': b'\x00' * padding}
-        data = pickle.dumps(data)
+        data = pickle.dumps(data, protocol=4)
         out_f.write(data)
     return new_file_path
 

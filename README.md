@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.6`
+
+- 修复 pickle 库反序列化导致内存溢出的问题[#65](https://github.com/zaxtyson/LanZouCloud-API/issues/65)
+
 ## `v2.6.5`
 
 - 修复蓝奏云主域名解析异常的问题[#59](https://github.com/zaxtyson/LanZouCloud-API/issues/59) [#60](https://github.com/zaxtyson/LanZouCloud-API/pull/60)

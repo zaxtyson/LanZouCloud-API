@@ -832,7 +832,7 @@ class LanZouCloud(object):
         if not os.path.exists(record_file):  # 初始化记录文件
             info = {'name': file_name, 'size': file_size, 'uploaded': 0, 'parts': []}
             with open(record_file, 'wb') as f:
-                pickle.dump(info, f)
+                pickle.dump(info, f, protocol=4)
         else:
             with open(record_file, 'rb') as f:
                 info = pickle.load(f)
@@ -859,7 +859,7 @@ class LanZouCloud(object):
                 info['parts'].append(os.path.basename(data_path))  # 记录已上传的文件名
                 with open(record_file, 'wb') as f:
                     logger.debug(f"Update record file: {uploaded_size}/{file_size}")
-                    pickle.dump(info, f)
+                    pickle.dump(info, f, protocol=4)
             else:
                 logger.debug(f"Upload data file failed: data_path={data_path}")
                 return LanZouCloud.FAILED
@@ -1041,10 +1041,19 @@ class LanZouCloud(object):
         os.rename(tmp_file_path, file_path)  # 下载完成，改回正常文件名
         if os.path.getsize(file_path) > 512:  # 文件大于 512 bytes 就检查一下
             file_info = None
+            is_protocol_3 = False
             with open(file_path, 'rb') as f:
                 f.seek(-512, os.SEEK_END)
                 last_512_bytes = f.read()
                 file_info = un_serialize(last_512_bytes)
+                # Python3.6 序列化时默认使用 pickle 第三版协议, 
+                # 导致计算时文件尾部多写了 5 字节， 保险期起见处理一下 
+                if not file_info: 
+                    is_protocol_3 = True
+                    f.seek(-517, os.SEEK_END)
+                    last_517_bytes = f.read()
+                    file_info = un_serialize(last_517_bytes)
+                    
 
             # 大文件的记录文件也可以反序列化出 name,但是没有 padding 字段
             if file_info is not None and 'padding' in file_info:
@@ -1059,7 +1068,8 @@ class LanZouCloud(object):
                 os.rename(file_path, new_file_path)
                 # 截断最后 512 字节隐藏信息, 还原文件
                 with open(new_file_path, 'rb+') as f:
-                    f.seek(-512, os.SEEK_END)
+                    truncate_size = 517 if is_protocol_3 else 512
+                    f.seek(-truncate_size, os.SEEK_END)
                     f.truncate()
                 file_path = new_file_path  # 保存文件重命名后真实路径
 
@@ -1222,7 +1232,7 @@ class LanZouCloud(object):
         if not os.path.exists(record_file):  # 初始化记录文件
             info = {'last_ending': 0, 'finished': []}  # 记录上一个数据块结尾地址和已经下载的数据块
             with open(record_file, 'wb') as rf:
-                pickle.dump(info, rf)
+                pickle.dump(info, rf, protocol=4)
         else:  # 读取记录文件，下载续传
             with open(record_file, 'rb') as rf:
                 info = pickle.load(rf)
@@ -1266,7 +1276,7 @@ class LanZouCloud(object):
                 finally:
                     info['last_ending'] = file_size_now
                     with open(record_file, 'wb') as rf:
-                        pickle.dump(info, rf)
+                        pickle.dump(info, rf, protocol=4)
                     logger.debug(f"Update download record info: {info}")
             # 全部数据块下载完成, 记录文件可以删除
             logger.debug(f"Delete download record file: {record_file}")

@@ -45,16 +45,24 @@ class LanZouCloud(object):
         self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
         self._upload_delay = (0, 0)  # 文件上传延时
-        self._host_url = 'https://pan.lanzouo.com'
         self._doupload_url = 'https://pc.woozooo.com/doupload.php'
         self._account_url = 'https://pc.woozooo.com/account.php'
         self._mydisk_url = 'https://pc.woozooo.com/mydisk.php'
+        # 蓝奏云的域名有时候备案会出问题，这时候一般会出一个新的备案的域名
+        # 当出现这种情况的时候，可以去下面这个查备案的网址查 鲁ICP备15001327号 ，看看是否有新的域名备案了
+        #       https://beian.miit.gov.cn/#/Integrated/recordQuery
+        # 如果有新的，这时候只需要
+        #   1. 将 _host_url 的域名改为新的
+        #   2. 把 最新的域名，比如 lanzouo 加到可能的域名列表的最前面
+        #   3. 如果下面的域名有部分不再出现在备案信息中了，可以直接注释或者移除
+        self._host_url = 'https://pan.lanzouo.com'
         self.available_domains = [
             'lanzouo.com',  # 2021-09-15 鲁ICP备15001327号-8
             'lanzouw.com',  # 2021-09-02 鲁ICP备15001327号-7
             'lanzoui.com',  # 2020-06-09 鲁ICP备15001327号-6
             'lanzoux.com',  # 2020-06-09 鲁ICP备15001327号-5
         ]
+
         self._cookies = None
         self._headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',

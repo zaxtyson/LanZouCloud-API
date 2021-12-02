@@ -45,10 +45,16 @@ class LanZouCloud(object):
         self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
         self._upload_delay = (0, 0)  # 文件上传延时
-        self._host_url = 'https://pan.lanzoui.com'
+        self._host_url = 'https://pan.lanzouo.com'
         self._doupload_url = 'https://pc.woozooo.com/doupload.php'
         self._account_url = 'https://pc.woozooo.com/account.php'
         self._mydisk_url = 'https://pc.woozooo.com/mydisk.php'
+        self.available_domains = [
+            'lanzouo.com',  # 2021-09-15 鲁ICP备15001327号-8
+            'lanzouw.com',  # 2021-09-02 鲁ICP备15001327号-7
+            'lanzoui.com',  # 2020-06-09 鲁ICP备15001327号-6
+            'lanzoux.com',  # 2020-06-09 鲁ICP备15001327号-5
+        ]
         self._cookies = None
         self._headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
@@ -80,14 +86,11 @@ class LanZouCloud(object):
         return None
 
     @staticmethod
-    def _all_possible_urls(url: str) -> List[str]:
+    def _all_possible_urls(self, url: str) -> List[str]:
         """蓝奏云的主域名有时会挂掉, 此时尝试切换到备用域名"""
-        available_domains = [
-            'lanzoui.com',  # 鲁ICP备15001327号-6, 2020-06-09, SEO 排名最低
-            'lanzoux.com',  # 鲁ICP备15001327号-5, 2020-06-09
-            'lanzous.com'  # 主域名, 备案异常, 部分地区已经无法访问
+        return [
+            re.sub(r'lanzou\w\.com', d, url) for d in self.available_domains
         ]
-        return [url.replace('lanzous.com', d) for d in available_domains]
 
     def ignore_limits(self):
         """解除官方限制"""

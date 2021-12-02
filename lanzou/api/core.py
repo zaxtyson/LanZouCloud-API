@@ -93,7 +93,6 @@ class LanZouCloud(object):
 
         return None
 
-    @staticmethod
     def _all_possible_urls(self, url: str) -> List[str]:
         """蓝奏云的主域名有时会挂掉, 此时尝试切换到备用域名"""
         return [

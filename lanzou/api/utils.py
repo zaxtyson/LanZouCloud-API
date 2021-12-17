@@ -78,8 +78,8 @@ def is_name_valid(filename: str) -> bool:
 
 def is_file_url(share_url: str) -> bool:
     """判断是否为文件的分享链接"""
-    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'  # 子域名可个性化设置或者不存在
-    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/i[a-zA-Z0-9]{5,}/?'  # 普通用户 URL 规则
+    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou\w.com/.+'  # 子域名可个性化设置或者不存在
+    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou\w.com/i[a-zA-Z0-9]{5,}/?'  # 普通用户 URL 规则
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):
@@ -95,8 +95,8 @@ def is_file_url(share_url: str) -> bool:
 
 def is_folder_url(share_url: str) -> bool:
     """判断是否为文件夹的分享链接"""
-    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'
-    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/(/s/)?b[a-zA-Z0-9]{7,}/?'
+    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou\w.com/.+'
+    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou\w.com/(/s/)?b[a-zA-Z0-9]{7,}/?'
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):

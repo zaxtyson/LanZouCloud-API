@@ -45,7 +45,7 @@ class LanZouCloud(object):
         self._timeout = 15  # 每个请求的超时(不包含下载响应体的用时)
         self._max_size = 100  # 单个文件大小上限 MB
         self._upload_delay = (0, 0)  # 文件上传延时
-        self._host_url = 'https://pan.lanzoui.com'
+        self._host_url = 'https://pan.lanzouo.com'
         self._doupload_url = 'https://pc.woozooo.com/doupload.php'
         self._account_url = 'https://pc.woozooo.com/account.php'
         self._mydisk_url = 'https://pc.woozooo.com/mydisk.php'
@@ -83,11 +83,11 @@ class LanZouCloud(object):
     def _all_possible_urls(url: str) -> List[str]:
         """蓝奏云的主域名有时会挂掉, 此时尝试切换到备用域名"""
         available_domains = [
-            'lanzoui.com',  # 鲁ICP备15001327号-6, 2020-06-09, SEO 排名最低
-            'lanzoux.com',  # 鲁ICP备15001327号-5, 2020-06-09
-            'lanzous.com'  # 主域名, 备案异常, 部分地区已经无法访问
+            'lanzouw.com',  # 鲁ICP备15001327号-7, 2021-09-02
+            'lanzoui.com',  # 鲁ICP备15001327号-6, 2020-06-09
+            'lanzoux.com'   # 鲁ICP备15001327号-5, 2020-06-09
         ]
-        return [url.replace('lanzous.com', d) for d in available_domains]
+        return [url.replace('lanzouo.com', d) for d in available_domains]
 
     def ignore_limits(self):
         """解除官方限制"""
@@ -1046,14 +1046,13 @@ class LanZouCloud(object):
                 f.seek(-512, os.SEEK_END)
                 last_512_bytes = f.read()
                 file_info = un_serialize(last_512_bytes)
-                # Python3.6 序列化时默认使用 pickle 第三版协议, 
-                # 导致计算时文件尾部多写了 5 字节， 保险期起见处理一下 
+                # Python3.7 序列化时默认使用 pickle 第三版协议,
+                # 导致计算时文件尾部多写了 5 字节, 应该都是用3.8, 保险期起见处理一下
                 if not file_info: 
                     is_protocol_3 = True
                     f.seek(-517, os.SEEK_END)
                     last_517_bytes = f.read()
                     file_info = un_serialize(last_517_bytes)
-                    
 
             # 大文件的记录文件也可以反序列化出 name,但是没有 padding 字段
             if file_info is not None and 'padding' in file_info:
@@ -1069,6 +1068,7 @@ class LanZouCloud(object):
                 # 截断最后 512 字节隐藏信息, 还原文件
                 with open(new_file_path, 'rb+') as f:
                     truncate_size = 517 if is_protocol_3 else 512
+                    logger.debug(f"Truncate last {truncate_size} bytes of file")
                     f.seek(-truncate_size, os.SEEK_END)
                     f.truncate()
                 file_path = new_file_path  # 保存文件重命名后真实路径

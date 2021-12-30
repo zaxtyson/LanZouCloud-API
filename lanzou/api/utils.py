@@ -78,8 +78,8 @@ def is_name_valid(filename: str) -> bool:
 
 def is_file_url(share_url: str) -> bool:
     """判断是否为文件的分享链接"""
-    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'  # 子域名可个性化设置或者不存在
-    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/i[a-zA-Z0-9]{5,}/?'  # 普通用户 URL 规则
+    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/.+'  # 子域名可个性化设置或者不存在
+    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/i[a-zA-Z0-9]{5,}/?'  # 普通用户 URL 规则
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):
@@ -95,8 +95,8 @@ def is_file_url(share_url: str) -> bool:
 
 def is_folder_url(share_url: str) -> bool:
     """判断是否为文件夹的分享链接"""
-    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/.+'
-    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[six].com/(/s/)?b[a-zA-Z0-9]{7,}/?'
+    base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/.+'
+    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/(/s/)?b[a-zA-Z0-9]{7,}/?'
     if not re.fullmatch(base_pat, share_url):
         return False
     elif re.fullmatch(user_pat, share_url):
@@ -198,7 +198,7 @@ def let_me_upload(file_path):
                 chunk = in_f.read(4096)
         # 构建文件 "报尾" 保存真实文件名,大小 512 字节
         # 追加数据到文件尾部，并不会影响文件的使用，无需修改即可分享给其他人使用，自己下载时则会去除，确保数据无误
-        # protocol=4（py3.8默认), 序列化后空字典占 42 字节
+        # protocol=4(py3.8默认), 序列化后空字典占 42 字节
         padding = 512 - len(file_name.encode('utf-8')) - 42
         data = {'name': file_name, 'padding': b'\x00' * padding}
         data = pickle.dumps(data, protocol=4)

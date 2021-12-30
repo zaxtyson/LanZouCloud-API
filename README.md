@@ -37,6 +37,7 @@
 ## `v2.6.6`
 
 - 修复 pickle 库反序列化导致内存溢出的问题[#65](https://github.com/zaxtyson/LanZouCloud-API/issues/65)
+- 更换为最新域名, 防止解析失败[#68](https://github.com/zaxtyson/LanZouCloud-API/pull/68)
 
 ## `v2.6.5`
 

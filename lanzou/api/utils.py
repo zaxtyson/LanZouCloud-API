@@ -79,18 +79,18 @@ def is_name_valid(filename: str) -> bool:
 def is_file_url(share_url: str) -> bool:
     """判断是否为文件的分享链接"""
     base_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/.+'  # 子域名可个性化设置或者不存在
-    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/i[a-zA-Z0-9]{5,}/?'  # 普通用户 URL 规则
+    user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/i[a-zA-Z0-9]{5,}(\?webpage=[a-zA-Z0-9]+?)?/?'  # 普通用户 URL 规则
     if not re.fullmatch(base_pat, share_url):
         return False
-    elif re.fullmatch(user_pat, share_url):
+    if re.fullmatch(user_pat, share_url):
         return True
-    else:  # VIP 用户的 URL 很随意
-        try:
-            html = requests.get(share_url, headers=headers).text
-            html = remove_notes(html)
-            return True if re.search(r'class="fileinfo"|id="file"|文件描述', html) else False
-        except (requests.RequestException, Exception):
-            return False
+    # VIP 用户的 URL 很随意
+    try:
+        html = requests.get(share_url, headers=headers).text
+        html = remove_notes(html)
+        return True if re.search(r'class="fileinfo"|id="file"|文件描述', html) else False
+    except (requests.RequestException, Exception):
+        return False
 
 
 def is_folder_url(share_url: str) -> bool:
@@ -99,15 +99,15 @@ def is_folder_url(share_url: str) -> bool:
     user_pat = r'https?://[a-zA-Z0-9-]*?\.?lanzou[a-z].com/(/s/)?b[a-zA-Z0-9]{7,}/?'
     if not re.fullmatch(base_pat, share_url):
         return False
-    elif re.fullmatch(user_pat, share_url):
+    if re.fullmatch(user_pat, share_url):
         return True
-    else:  # VIP 用户的 URL 很随意
-        try:
-            html = requests.get(share_url, headers=headers).text
-            html = remove_notes(html)
-            return True if re.search(r'id="infos"', html) else False
-        except (requests.RequestException, Exception):
-            return False
+    # VIP 用户的 URL 很随意
+    try:
+        html = requests.get(share_url, headers=headers).text
+        html = remove_notes(html)
+        return True if re.search(r'id="infos"', html) else False
+    except (requests.RequestException, Exception):
+        return False
 
 
 def un_serialize(data: bytes):

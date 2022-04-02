@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.7`
+
+- 修复分享链接带有 `webpage` 参数时无法下载的问题[#74](https://github.com/zaxtyson/LanZouCloud-API/issues/74)
+
 ## `v2.6.6`
 
 - 修复 pickle 库反序列化导致内存溢出的问题[#65](https://github.com/zaxtyson/LanZouCloud-API/issues/65)

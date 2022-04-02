@@ -85,7 +85,7 @@ class LanZouCloud(object):
         available_domains = [
             'lanzouw.com',  # 鲁ICP备15001327号-7, 2021-09-02
             'lanzoui.com',  # 鲁ICP备15001327号-6, 2020-06-09
-            'lanzoux.com'   # 鲁ICP备15001327号-5, 2020-06-09
+            'lanzoux.com'  # 鲁ICP备15001327号-5, 2020-06-09
         ]
         return [url.replace('lanzouo.com', d) for d in available_domains]
 
@@ -512,6 +512,14 @@ class LanZouCloud(object):
             if len(sign) < 20:  # 此时 sign 保存在变量里面, 变量名是 sign 匹配的字符
                 sign = re.search(rf"var {sign}\s*=\s*'(.+?)';", first_page).group(1)
             post_data = {'action': 'downprocess', 'sign': sign, 'ves': 1}
+            # 某些特殊情况 share_url 会出现 webpage 参数, post_data 需要更多参数
+            # https://github.com/zaxtyson/LanZouCloud-API/issues/74
+            if "?webpage=" in share_url:
+                ajax_data = re.search(r"var ajaxdata\s*=\s*'(.+?)';", first_page).group(1)
+                web_sign = re.search(r"var websign\s*=\s*'(.+?)';", first_page).group(1)
+                web_sign_key = re.search(r"var websignkey\s*=\s*'(.+?)';", first_page).group(1)
+                post_data = {'action': 'downprocess', 'signs': ajax_data, 'sign': sign, 'ves': 1,
+                             'websign': web_sign, 'websignkey': web_sign_key}
             link_info = self._post(self._host_url + '/ajaxm.php', post_data)
             if not link_info:
                 return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
@@ -1048,7 +1056,7 @@ class LanZouCloud(object):
                 file_info = un_serialize(last_512_bytes)
                 # Python3.7 序列化时默认使用 pickle 第三版协议,
                 # 导致计算时文件尾部多写了 5 字节, 应该都是用3.8, 保险期起见处理一下
-                if not file_info: 
+                if not file_info:
                     is_protocol_3 = True
                     f.seek(-517, os.SEEK_END)
                     last_517_bytes = f.read()

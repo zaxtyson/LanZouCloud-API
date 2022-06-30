@@ -1435,6 +1435,8 @@ class LanZouCloud(object):
                     result.sort(key=lambda li:li[filter_type])
 
             for item in result[1:]:
-                self.delete(item['id'])
+                ret = self.delete(item['id'])
+                if ret != LanZouCloud.SUCCESS:
+                    break
 
-        return LanZouCloud.SUCCESS
+        return ret

@@ -1418,10 +1418,10 @@ class LanZouCloud(object):
         if not file_list:
             return LanZouCloud.SUCCESS
 
-        result = []
         # file_list {'file_name':[{'name':value, 'id':value, 'size':value, 'time':value},],}
-        for same_name in file_list:
-            for item in same_name:
+        for file_name in file_list:
+            result = []
+            for item in file_name:
                 size = re.findall(r'\d+\.\d',item['size'])
                 size = float(size[0])
                 time = datetime.strptime(item['time'],'%Y-%m-%d').timestamp()
@@ -1437,6 +1437,6 @@ class LanZouCloud(object):
             for item in result[1:]:
                 ret = self.delete(item['id'])
                 if ret != LanZouCloud.SUCCESS:
-                    break
+                    return ret
 
-        return ret
+        return LanZouCloud.SUCCESS

@@ -1388,7 +1388,7 @@ class LanZouCloud(object):
 
         return LanZouCloud.SUCCESS
 
-    def find_same_name_files(self, folder_id) -> list:
+    def find_same_name_files(self, folder_id = -1) -> list:
         file_list = self.get_file_list(folder_id)
         temp = {} # {'file_name':[{'name':value, 'id':value, 'size':value, 'time':value},],}
         result = []

@@ -34,6 +34,11 @@
 
 # 更新日志
 
+## `v2.6.8`
+
+- 修复分享链接带有 `webpage` 参数时无法下载的问题[#81](https://github.com/zaxtyson/LanZouCloud-API/issues/81)
+
+
 ## `v2.6.7`
 
 - 修复分享链接带有 `webpage` 参数时无法下载的问题[#74](https://github.com/zaxtyson/LanZouCloud-API/issues/74)

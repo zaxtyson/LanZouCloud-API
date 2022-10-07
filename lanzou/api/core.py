@@ -464,67 +464,72 @@ class LanZouCloud(object):
             return FileDetail(LanZouCloud.FILE_CANCELLED, pwd=pwd, url=share_url)
 
         # 这里获取下载直链 304 重定向前的链接
-        if 'id="pwdload"' in first_page or 'id="passwddiv"' in first_page:  # 文件设置了提取码时
-            if len(pwd) == 0:
-                return FileDetail(LanZouCloud.LACK_PASSWORD, pwd=pwd, url=share_url)  # 没给提取码直接退出
-            # data : 'action=downprocess&sign=AGZRbwEwU2IEDQU6BDRUaFc8DzxfMlRjCjTPlVkWzFSYFY7ATpWYw_c_c&p='+pwd,
-            sign = re.search(r"sign=(\w+?)&", first_page).group(1)
-            post_data = {'action': 'downprocess', 'sign': sign, 'p': pwd}
-            link_info = self._post(self._host_url + '/ajaxm.php', post_data)  # 保存了重定向前的链接信息和文件名
-            second_page = self._get(share_url)  # 再次请求文件分享页面，可以看见文件名，时间，大小等信息(第二页)
-            if not link_info or not second_page.text:
-                return FileDetail(LanZouCloud.NETWORK_ERROR, pwd=pwd, url=share_url)
-            link_info = link_info.json()
-            second_page = remove_notes(second_page.text)
-            # 提取文件信息
-            f_name = link_info['inf'].replace("*", "_")
-            f_size = re.search(r'大小.+?(\d[\d.,]+\s?[BKM]?)<', second_page)
-            f_size = f_size.group(1).replace(",", "") if f_size else '0 M'
-            f_time = re.search(r'class="n_file_infos">(.+?)</span>', second_page)
-            f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
-            f_desc = re.search(r'class="n_box_des">(.*?)</div>', second_page)
-            f_desc = f_desc.group(1) if f_desc else ''
-        else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
-            para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
-            # 文件名位置变化很多
-            f_name = re.search(r"<title>(.+?) - 蓝奏云</title>", first_page) or \
-                     re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
-                     re.search(r'<div style="font-size.+?>([^<>].+?)</div>', first_page) or \
-                     re.search(r"var filename = '(.+?)';", first_page) or \
-                     re.search(r'id="filenajax">(.+?)</div>', first_page) or \
-                     re.search(r'<div class="b"><span>([^<>]+?)</span></div>', first_page)
-            f_name = f_name.group(1).replace("*", "_") if f_name else "未匹配到文件名"
-            # 匹配文件时间，文件没有时间信息就视为今天，统一表示为 2020-01-01 格式
-            f_time = re.search(r'>(\d+\s?[秒天分小][钟时]?前|[昨前]天\s?[\d:]+?|\d+\s?天前|\d{4}-\d\d-\d\d)<', first_page)
-            f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
-            # 匹配文件大小
-            f_size = re.search(r'大小.+?(\d[\d.,]+\s?[BKM]?)<', first_page)
-            f_size = f_size.group(1).replace(",", "") if f_size else '0 M'
-            f_desc = re.search(r'文件描述.+?<br>\n?\s*(.*?)\s*</td>', first_page)
-            f_desc = f_desc.group(1) if f_desc else ''
-            first_page = self._get(self._host_url + para)
-            if not first_page:
-                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
-                                  pwd=pwd, url=share_url)
-            first_page = remove_notes(first_page.text)
-            # 一般情况 sign 的值就在 data 里，有时放在变量后面
-            sign = re.search(r"'sign':(.+?),", first_page).group(1)
-            if len(sign) < 20:  # 此时 sign 保存在变量里面, 变量名是 sign 匹配的字符
-                sign = re.search(rf"var {sign}\s*=\s*'(.+?)';", first_page).group(1)
-            post_data = {'action': 'downprocess', 'sign': sign, 'ves': 1}
-            # 某些特殊情况 share_url 会出现 webpage 参数, post_data 需要更多参数
-            # https://github.com/zaxtyson/LanZouCloud-API/issues/74
-            if "?webpage=" in share_url:
-                ajax_data = re.search(r"var ajaxdata\s*=\s*'(.+?)';", first_page).group(1)
-                web_sign = re.search(r"var websign\s*=\s*'(.+?)';", first_page).group(1)
-                web_sign_key = re.search(r"var websignkey\s*=\s*'(.+?)';", first_page).group(1)
-                post_data = {'action': 'downprocess', 'signs': ajax_data, 'sign': sign, 'ves': 1,
-                             'websign': web_sign, 'websignkey': web_sign_key}
-            link_info = self._post(self._host_url + '/ajaxm.php', post_data)
-            if not link_info:
-                return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
-                                  pwd=pwd, url=share_url)
-            link_info = link_info.json()
+        try:
+            if 'id="pwdload"' in first_page or 'id="passwddiv"' in first_page:  # 文件设置了提取码时
+                if len(pwd) == 0:
+                    return FileDetail(LanZouCloud.LACK_PASSWORD, pwd=pwd, url=share_url)  # 没给提取码直接退出
+                # data : 'action=downprocess&sign=AGZRbwEwU2IEDQU6BDRUaFc8DzxfMlRjCjTPlVkWzFSYFY7ATpWYw_c_c&p='+pwd,
+                sign = re.search(r"sign=(\w+?)&", first_page).group(1)
+                post_data = {'action': 'downprocess', 'sign': sign, 'p': pwd}
+                link_info = self._post(self._host_url + '/ajaxm.php', post_data)  # 保存了重定向前的链接信息和文件名
+                second_page = self._get(share_url)  # 再次请求文件分享页面，可以看见文件名，时间，大小等信息(第二页)
+                if not link_info or not second_page.text:
+                    return FileDetail(LanZouCloud.NETWORK_ERROR, pwd=pwd, url=share_url)
+                link_info = link_info.json()
+                second_page = remove_notes(second_page.text)
+                # 提取文件信息
+                f_name = link_info['inf'].replace("*", "_")
+                f_size = re.search(r'大小.+?(\d[\d.,]+\s?[BKM]?)<', second_page)
+                f_size = f_size.group(1).replace(",", "") if f_size else '0 M'
+                f_time = re.search(r'class="n_file_infos">(.+?)</span>', second_page)
+                f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
+                f_desc = re.search(r'class="n_box_des">(.*?)</div>', second_page)
+                f_desc = f_desc.group(1) if f_desc else ''
+            else:  # 文件没有设置提取码时,文件信息都暴露在分享页面上
+                para = re.search(r'<iframe.*?src="(.+?)"', first_page).group(1)  # 提取下载页面 URL 的参数
+                # 文件名位置变化很多
+                f_name = re.search(r"<title>(.+?) - 蓝奏云</title>", first_page) or \
+                         re.search(r'<div class="filethetext".+?>([^<>]+?)</div>', first_page) or \
+                         re.search(r'<div style="font-size.+?>([^<>].+?)</div>', first_page) or \
+                         re.search(r"var filename = '(.+?)';", first_page) or \
+                         re.search(r'id="filenajax">(.+?)</div>', first_page) or \
+                         re.search(r'<div class="b"><span>([^<>]+?)</span></div>', first_page)
+                f_name = f_name.group(1).replace("*", "_") if f_name else "未匹配到文件名"
+                # 匹配文件时间，文件没有时间信息就视为今天，统一表示为 2020-01-01 格式
+                f_time = re.search(r'>(\d+\s?[秒天分小][钟时]?前|[昨前]天\s?[\d:]+?|\d+\s?天前|\d{4}-\d\d-\d\d)<', first_page)
+                f_time = time_format(f_time.group(1)) if f_time else time_format('0 小时前')
+                # 匹配文件大小
+                f_size = re.search(r'大小.+?(\d[\d.,]+\s?[BKM]?)<', first_page)
+                f_size = f_size.group(1).replace(",", "") if f_size else '0 M'
+                f_desc = re.search(r'文件描述.+?<br>\n?\s*(.*?)\s*</td>', first_page)
+                f_desc = f_desc.group(1) if f_desc else ''
+                first_page = self._get(self._host_url + para)
+                if not first_page:
+                    return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                      pwd=pwd, url=share_url)
+                first_page = remove_notes(first_page.text)
+                # 一般情况 sign 的值就在 data 里，有时放在变量后面
+                sign = re.search(r"'sign':(.+?),", first_page).group(1)
+                if len(sign) < 20:  # 此时 sign 保存在变量里面, 变量名是 sign 匹配的字符
+                    sign = re.search(rf"var {sign}\s*=\s*'(.+?)';", first_page).group(1)
+                post_data = {'action': 'downprocess', 'sign': sign, 'ves': 1}
+                # 某些特殊情况 share_url 会出现 webpage 参数, post_data 需要更多参数
+                # https://github.com/zaxtyson/LanZouCloud-API/issues/74
+                # https://github.com/zaxtyson/LanZouCloud-API/issues/81
+                if "?webpage=" in share_url:
+                    ajax_data = re.search(r"var ajaxdata\s*=\s*'(.+?)';", first_page).group(1)
+                    web_sign = re.search(r"var a?websigna?\s*=\s*'(.+?)';", first_page).group(1)
+                    web_sign_key = re.search(r"var c?websignkeyc?\s*=\s*'(.+?)';", first_page).group(1)
+                    post_data = {'action': 'downprocess', 'signs': ajax_data, 'sign': sign, 'ves': 1,
+                                 'websign': web_sign, 'websignkey': web_sign_key}
+                link_info = self._post(self._host_url + '/ajaxm.php', post_data)
+                if not link_info:
+                    return FileDetail(LanZouCloud.NETWORK_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                      pwd=pwd, url=share_url)
+                link_info = link_info.json()
+        except AttributeError as e:  # 正则匹配失败
+            logger.error(e)
+            return FileDetail(LanZouCloud.FAILED)
 
         # 这里开始获取文件直链
         if link_info['zt'] != 1:  # 返回信息异常，无法获取直链
@@ -541,16 +546,20 @@ class LanZouCloud(object):
         if '网络异常' not in download_page_html:  # 没有遇到验证码
             direct_url = download_page.headers['Location']  # 重定向后的真直链
         else:  # 遇到验证码，验证后才能获取下载直链
-            file_token = re.findall("'file':'(.+?)'", download_page_html)[0]
-            file_sign = re.findall("'sign':'(.+?)'", download_page_html)[0]
-            check_api = 'https://vip.d0.baidupan.com/file/ajax.php'
-            post_data = {'file': file_token, 'el': 2, 'sign': file_sign}
-            sleep(2)  # 这里必需等待2s, 否则直链返回 ?SignError
-            resp = self._post(check_api, post_data)
-            direct_url = resp.json()['url']
-            if not direct_url:
-                return FileDetail(LanZouCloud.CAPTCHA_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
-                                  pwd=pwd, url=share_url)
+            try:
+                file_token = re.findall("'file':'(.+?)'", download_page_html)[0]
+                file_sign = re.findall("'sign':'(.+?)'", download_page_html)[0]
+                check_api = 'https://vip.d0.baidupan.com/file/ajax.php'
+                post_data = {'file': file_token, 'el': 2, 'sign': file_sign}
+                sleep(2)  # 这里必需等待2s, 否则直链返回 ?SignError
+                resp = self._post(check_api, post_data)
+                direct_url = resp.json()['url']
+                if not direct_url:
+                    return FileDetail(LanZouCloud.CAPTCHA_ERROR, name=f_name, time=f_time, size=f_size, desc=f_desc,
+                                      pwd=pwd, url=share_url)
+            except IndexError as e:
+                logger.error(e)
+                return FileDetail(LanZouCloud.FAILED)
 
         f_type = f_name.split('.')[-1]
         return FileDetail(LanZouCloud.SUCCESS,
@@ -808,11 +817,13 @@ class LanZouCloud(object):
         monitor = MultipartEncoderMonitor(post_data, _call_back)
         result = self._post('https://pc.woozooo.com/fileup.php', data=monitor, headers=tmp_header, timeout=3600)
         if not result:  # 网络异常
+            file.close()
             return LanZouCloud.NETWORK_ERROR
         else:
             result = result.json()
         if result["zt"] != 1:
             logger.debug(f'Upload failed: result={result}')
+            file.close()
             return LanZouCloud.FAILED  # 上传失败
 
         if uploaded_handler is not None:
@@ -820,8 +831,9 @@ class LanZouCloud(object):
             uploaded_handler(file_id, is_file=True)  # 对已经上传的文件再进一步处理
 
         if need_delete:
-            file.close()
             os.remove(file_path)
+
+        file.close()
         return LanZouCloud.SUCCESS
 
     def _upload_big_file(self, file_path, dir_id, *, callback=None, uploaded_handler=None):

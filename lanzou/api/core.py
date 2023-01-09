@@ -1134,7 +1134,7 @@ class LanZouCloud(object):
             html = remove_notes(html)
             lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
             t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
-            k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
+            k = re.findall(r"var _[0-9a-z]{5} = '([0-9a-z]{32,})';", html)[0]
             # 文件夹的信息
             folder_id = re.findall(r"'fid':'?(\d+)'?,", html)[0]
             folder_name = re.findall(r"var.+?='(.+?)';\n.+document.title", html) or \

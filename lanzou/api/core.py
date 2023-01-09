@@ -145,6 +145,9 @@ class LanZouCloud(object):
         """通过cookie登录"""
         self._session.cookies.update(cookie)
         html = self._get(self._account_url)
+        ylogin = cookie.get('ylogin','')
+        if ylogin:
+            self._doupload_url = f"{self._doupload_url}?uid={ylogin}"
         if not html:
             return LanZouCloud.NETWORK_ERROR
         return LanZouCloud.FAILED if '网盘用户登录' in html.text else LanZouCloud.SUCCESS

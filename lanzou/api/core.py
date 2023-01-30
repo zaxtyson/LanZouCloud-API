@@ -154,7 +154,7 @@ class LanZouCloud(object):
         try:
             temp = self._get(f"{self._mydisk_url}?item=files&action=index&u={ylogin}")
             temp = remove_notes(temp.text)
-            self._vei = re.findall(r"'vei':'([0-9a-zA-Z=]{20,})'", temp)[0]
+            self._vei = re.findall(r"'vei':'([0-9a-zA-Z=]{10,})'", temp)[0]
         except:
             return LanZouCloud.OFFICIAL_LIMITED
         return LanZouCloud.FAILED if '网盘用户登录' in html.text else LanZouCloud.SUCCESS
@@ -1144,7 +1144,7 @@ class LanZouCloud(object):
             html = remove_notes(html)
             lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
             t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
-            k = re.findall(r"var _[0-9a-z]{5} = '([0-9a-z]{32,})';", html)[0]
+            k = re.findall(r"var _[0-9a-z]{5} = '([0-9a-z]{15,})';", html)[0]
             # 文件夹的信息
             folder_id = re.findall(r"'fid':'?(\d+)'?,", html)[0]
             folder_name = re.findall(r"var.+?='(.+?)';\n.+document.title", html) or \

@@ -792,8 +792,10 @@ class LanZouCloud(object):
         file = open(file_path, 'rb')
         post_data = {
             "task": "1",
-            "folder_id": str(folder_id),
+            "vie": "2",
+            "ve": "2",
             "id": "WU_FILE_0",
+            "folder_id_bb_n": str(folder_id),
             "name": filename,
             "upload_file": (filename, file, 'application/octet-stream')
         }

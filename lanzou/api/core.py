@@ -50,6 +50,7 @@ class LanZouCloud(object):
         self._account_url = 'https://pc.woozooo.com/account.php'
         self._mydisk_url = 'https://pc.woozooo.com/mydisk.php'
         self._cookies = None
+        self._vei = None
         self._headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
             'Referer': 'https://pc.woozooo.com/mydisk.php',
@@ -145,8 +146,17 @@ class LanZouCloud(object):
         """通过cookie登录"""
         self._session.cookies.update(cookie)
         html = self._get(self._account_url)
+        ylogin = cookie.get('ylogin','')
+        if ylogin:
+            self._doupload_url = f"{self._doupload_url}?uid={ylogin}"
         if not html:
             return LanZouCloud.NETWORK_ERROR
+        try:
+            temp = self._get(f"{self._mydisk_url}?item=files&action=index&u={ylogin}")
+            temp = remove_notes(temp.text)
+            self._vei = re.findall(r"'vei':'([0-9a-zA-Z=]{10,})'", temp)[0]
+        except:
+            return LanZouCloud.OFFICIAL_LIMITED
         return LanZouCloud.FAILED if '网盘用户登录' in html.text else LanZouCloud.SUCCESS
 
     def logout(self) -> int:
@@ -360,7 +370,7 @@ class LanZouCloud(object):
         page = 1
         file_list = FileList()
         while True:
-            post_data = {'task': 5, 'folder_id': folder_id, 'pg': page}
+            post_data = {'task': 5, 'folder_id': folder_id, 'pg': page,'vei':self._vei}
             resp = self._post(self._doupload_url, post_data)
             if not resp:  # 网络异常，重试
                 continue
@@ -387,7 +397,7 @@ class LanZouCloud(object):
     def get_dir_list(self, folder_id=-1) -> FolderList:
         """获取子文件夹列表"""
         folder_list = FolderList()
-        post_data = {'task': 47, 'folder_id': folder_id}
+        post_data = {'task': 47, 'folder_id': folder_id,'vei':self._vei}
         resp = self._post(self._doupload_url, post_data)
         if not resp:
             return folder_list
@@ -428,7 +438,7 @@ class LanZouCloud(object):
         """获取文件夹完整路径"""
         path_list = FolderList()
         path_list.append(FolderId('LanZouCloud', -1))
-        post_data = {'task': 47, 'folder_id': folder_id}
+        post_data = {'task': 47, 'folder_id': folder_id,'vei':self._vei}
         resp = self._post(self._doupload_url, post_data)
         if not resp:
             return path_list
@@ -602,7 +612,7 @@ class LanZouCloud(object):
         pwd = f_info['pwd'] if f_info['onof'] == '1' else ''
         if 'f_id' in f_info.keys():  # 说明返回的是文件的信息
             url = f_info['is_newd'] + '/' + f_info['f_id']  # 文件的分享链接需要拼凑
-            file_info = self._post(self._doupload_url, {'task': 12, 'file_id': fid})  # 文件信息
+            file_info = self._post(self._doupload_url, {'task': 12, 'file_id': fid,'vei':self._vei})  # 文件信息
             if not file_info:
                 return ShareInfo(LanZouCloud.NETWORK_ERROR)
             name = file_info.json()['text']  # 无后缀的文件名(获得后缀又要发送请求,没有就没有吧,尽可能减少请求数量)
@@ -701,7 +711,7 @@ class LanZouCloud(object):
         # 这里 file_id 可以为任意值,不会对结果产生影响
         result = FolderList()
         result.append(FolderId(name='LanZouCloud', id=-1))
-        resp = self._post(self._doupload_url, data={"task": 19, "file_id": -1})
+        resp = self._post(self._doupload_url, data={"task": 19, "file_id": -1,'vei':self._vei})
         if not resp or resp.json()['zt'] != 1:  # 获取失败或者网络异常
             return result
         info = resp.json()['info'] or []  # 新注册用户无数据, info=None
@@ -717,7 +727,7 @@ class LanZouCloud(object):
         root = FolderList()
         root.append(FolderId('LanZouCloud', -1))
         result.append(root)
-        resp = self._post(self._doupload_url, data={"task": 19, "file_id": -1})
+        resp = self._post(self._doupload_url, data={"task": 19, "file_id": -1,'vei':self._vei})
         if not resp or resp.json()['zt'] != 1:  # 获取失败或者网络异常
             return result
 
@@ -817,7 +827,7 @@ class LanZouCloud(object):
                     self._upload_finished_flag = True
 
         monitor = MultipartEncoderMonitor(post_data, _call_back)
-        result = self._post('https://pc.woozooo.com/fileup.php', data=monitor, headers=tmp_header, timeout=3600)
+        result = self._post('https://pc.woozooo.com/html5up.php', data=monitor, headers=tmp_header, timeout=3600)
         if not result:  # 网络异常
             file.close()
             return LanZouCloud.NETWORK_ERROR
@@ -1136,7 +1146,7 @@ class LanZouCloud(object):
             html = remove_notes(html)
             lx = re.findall(r"'lx':'?(\d)'?,", html)[0]
             t = re.findall(r"var [0-9a-z]{6} = '(\d{10})';", html)[0]
-            k = re.findall(r"var [0-9a-z]{6} = '([0-9a-z]{15,})';", html)[0]
+            k = re.findall(r"var _[0-9a-z]{5} = '([0-9a-z]{15,})';", html)[0]
             # 文件夹的信息
             folder_id = re.findall(r"'fid':'?(\d+)'?,", html)[0]
             folder_name = re.findall(r"var.+?='(.+?)';\n.+document.title", html) or \

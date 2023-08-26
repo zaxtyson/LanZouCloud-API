@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.9`
+
+- 修复上传成功后文件名不完整问题[#95](https://github.com/zaxtyson/LanZouCloud-API/issues/95)
+
 ## `v2.6.8`
 
 - 修复分享链接带有 `webpage` 参数时无法下载的问题[#81](https://github.com/zaxtyson/LanZouCloud-API/issues/81)

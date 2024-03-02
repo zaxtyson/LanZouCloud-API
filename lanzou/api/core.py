@@ -55,6 +55,7 @@ class LanZouCloud(object):
             'Referer': 'https://pc.woozooo.com/mydisk.php',
             'Accept-Language': 'zh-CN,zh;q=0.9',  # 提取直连必需设置这个，否则拿不到数据
         }
+        self._uid = 0 # uid 用于上传文件时的参数
         disable_warnings(InsecureRequestWarning)  # 全局禁用 SSL 警告
 
     def _get(self, url, **kwargs):
@@ -143,6 +144,7 @@ class LanZouCloud(object):
 
     def login_by_cookie(self, cookie: dict) -> int:
         """通过cookie登录"""
+        self._uid = cookie['ylogin'] # 将cookie的uid保存下来用于上传函数
         self._session.cookies.update(cookie)
         html = self._get(self._account_url)
         if not html:
@@ -388,7 +390,7 @@ class LanZouCloud(object):
         """获取子文件夹列表"""
         folder_list = FolderList()
         post_data = {'task': 47, 'folder_id': folder_id}
-        resp = self._post(self._doupload_url, post_data)
+        resp = self._post(self._doupload_url+"?uid="+str(self._uid), post_data) # 上传文件时需要 uid 参数
         if not resp:
             return folder_list
         for folder in resp.json()['text']:

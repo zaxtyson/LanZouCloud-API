@@ -34,6 +34,10 @@
 
 # 更新日志
 
+## `v2.6.10`
+
+- 修复 `get_dir_list` 缺少 uid 无法使用的问题[#114](https://github.com/zaxtyson/LanZouCloud-API/pull/104)
+
 ## `v2.6.9`
 
 - 修复上传成功后文件名不完整问题[#95](https://github.com/zaxtyson/LanZouCloud-API/issues/95)

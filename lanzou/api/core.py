@@ -772,7 +772,7 @@ class LanZouCloud(object):
         self.delete_rec(folder_id, False)
         return LanZouCloud.SUCCESS
 
-    def _upload_small_file(self, file_path, folder_id=-1, *, callback=None, uploaded_handler=None) -> int:
+    def _upload_small_file(self, file_path, folder_id=-1, *, overwrite=True, callback=None, uploaded_handler=None) -> int:
         """绕过格式限制上传不超过 max_size 的文件"""
         if not os.path.isfile(file_path):
             return LanZouCloud.PATH_ERROR
@@ -784,11 +784,12 @@ class LanZouCloud(object):
             file_path = let_me_upload(file_path)  # 添加了报尾的新文件
             need_delete = True
 
-        # 文件已经存在同名文件就删除
         filename = name_format(os.path.basename(file_path))
-        file_list = self.get_file_list(folder_id)
-        if file_list.find_by_name(filename):
-            self.delete(file_list.find_by_name(filename).id)
+        # 如果允许覆盖重名文件
+        if overwrite:
+            file_list = self.get_file_list(folder_id)
+            if file_list.find_by_name(filename):
+                self.delete(file_list.find_by_name(filename).id)
         logger.debug(f'Upload file_path:{file_path} to folder_id:{folder_id}')
 
         file = open(file_path, 'rb')
@@ -840,7 +841,7 @@ class LanZouCloud(object):
         file.close()
         return LanZouCloud.SUCCESS
 
-    def _upload_big_file(self, file_path, dir_id, *, callback=None, uploaded_handler=None):
+    def _upload_big_file(self, file_path, dir_id, *, overwrite=True, callback=None, uploaded_handler=None):
         """上传大文件, 且使得回调函数只显示一个文件"""
         if self._limit_mode:  # 不允许绕过官方限制
             return LanZouCloud.OFFICIAL_LIMITED
@@ -876,7 +877,7 @@ class LanZouCloud(object):
 
         while uploaded_size < file_size:
             data_size, data_path = big_file_split(file_path, self._max_size, start_byte=uploaded_size)
-            code = self._upload_small_file(data_path, dir_id, callback=_callback, uploaded_handler=_close_pwd)
+            code = self._upload_small_file(data_path, dir_id, overwrite=overwrite, callback=_callback, uploaded_handler=_close_pwd)
             if code == LanZouCloud.SUCCESS:
                 uploaded_size += data_size  # 更新已上传的总字节大小
                 info['uploaded'] = uploaded_size
@@ -899,7 +900,7 @@ class LanZouCloud(object):
         record_name = name_format(''.join(record_name)) + '.txt'
         record_file_new = tmp_dir + os.sep + record_name
         os.rename(record_file, record_file_new)
-        code = self._upload_small_file(record_file_new, dir_id, uploaded_handler=_close_pwd)  # 上传记录文件
+        code = self._upload_small_file(record_file_new, dir_id, overwrite=overwrite, uploaded_handler=_close_pwd)  # 上传记录文件
         if code != LanZouCloud.SUCCESS:
             logger.debug(f"Upload record file failed: {record_file_new}")
             return LanZouCloud.FAILED
@@ -908,7 +909,7 @@ class LanZouCloud(object):
         logger.debug(f"Upload finished, Delete tmp folder:{tmp_dir}")
         return LanZouCloud.SUCCESS
 
-    def upload_file(self, file_path, folder_id=-1, *, callback=None, uploaded_handler=None) -> int:
+    def upload_file(self, file_path, folder_id=-1, *, overwrite=True, callback=None, uploaded_handler=None) -> int:
         """解除限制上传文件
         :param callback 用于显示上传进度的回调函数
                 def callback(file_name, total_size, now_size):
@@ -926,7 +927,7 @@ class LanZouCloud(object):
 
         # 单个文件不超过 max_size 直接上传
         if os.path.getsize(file_path) <= self._max_size * 1048576:
-            return self._upload_small_file(file_path, folder_id, callback=callback, uploaded_handler=uploaded_handler)
+            return self._upload_small_file(file_path, folder_id, overwrite=overwrite, callback=callback, uploaded_handler=uploaded_handler)
 
         # 上传超过 max_size 的文件
         if self._limit_mode:
@@ -939,9 +940,9 @@ class LanZouCloud(object):
 
         if uploaded_handler is not None:
             uploaded_handler(dir_id, is_file=False)
-        return self._upload_big_file(file_path, dir_id, callback=callback, uploaded_handler=uploaded_handler)
+        return self._upload_big_file(file_path, dir_id, overwrite=overwrite, callback=callback, uploaded_handler=uploaded_handler)
 
-    def upload_dir(self, dir_path, folder_id=-1, *, callback=None, failed_callback=None, uploaded_handler=None):
+    def upload_dir(self, dir_path, folder_id=-1, *, overwrite=True, callback=None, failed_callback=None, uploaded_handler=None):
         """批量上传文件夹中的文件(不会递归上传子文件夹)
         :param folder_id: 网盘文件夹 id
         :param dir_path: 文件夹路径
@@ -971,7 +972,7 @@ class LanZouCloud(object):
             file_path = dir_path + os.sep + filename
             if not os.path.isfile(file_path):
                 continue  # 跳过子文件夹
-            code = self.upload_file(file_path, dir_id, callback=callback, uploaded_handler=uploaded_handler)
+            code = self.upload_file(file_path, dir_id, overwrite=overwrite, callback=callback, uploaded_handler=uploaded_handler)
             if code != LanZouCloud.SUCCESS:
                 if failed_callback is not None:
                     failed_callback(code, filename)
@@ -1400,5 +1401,58 @@ class LanZouCloud(object):
                     self.down_dir_by_id(sub_folder.id, save_path, callback=callback, overwrite=overwrite,
                                         failed_callback=failed_callback, downloaded_handler=downloaded_handler,
                                         recursive=True)
+
+        return LanZouCloud.SUCCESS
+
+    def find_same_name_files(self, folder_id = -1) -> list:
+        file_list = self.get_file_list(folder_id)
+        temp = {} # {'file_name':[{'name':value, 'id':value, 'size':value, 'time':value},],}
+        result = []
+        for file_item in file_list:
+            if file_item.name in temp:
+                # get_file_list函数里有时上一页的最后一个文件是下一页的第一个文件，但其实这两个id是一样的，不能错误当成是两个重名文件
+                if file_item.id != temp[file_item.name][-1]['id']:
+                    temp[file_item.name].append(
+                        {'name': file_item.name, 'id': file_item.id, 'size': file_item.size, 'time': file_item.time})
+                else:
+                    continue
+            else:
+                temp[file_item.name] = [
+                    {'name': file_item.name, 'id': file_item.id, 'size': file_item.size, 'time': file_item.time}]
+
+        for key in temp.keys():
+            if len(temp[key]) > 1:
+                result.append(temp[key])
+
+        return result
+
+    def delete_same_name_files(self, folder_id = -1, *, filter_type='id', reverse=False) -> int:
+        if filter_type not in ['id', 'size', 'time']:
+            return LanZouCloud.FAILED
+
+        file_list = self.find_same_name_files(folder_id)
+        if not file_list:
+            return LanZouCloud.SUCCESS
+
+        # file_list {'file_name':[{'name':value, 'id':value, 'size':value, 'time':value},],}
+        for file_name in file_list:
+            result = []
+            for item in file_name:
+                size = re.findall(r'\d+\.\d',item['size'])
+                size = float(size[0])
+                time = datetime.strptime(item['time'],'%Y-%m-%d').timestamp()
+                result.append({'id':item['id'], 'size':size, 'time':time})
+
+                # file_list本身其实是按id从大到小排列，也即时间从近到远排列，当遇到相同时间或者相同大小的文件时，默认保留id最大，也即最新的文件
+                # 所以reverse与sort本身的reverse相反
+                if not reverse:
+                    result.sort(key=lambda li:li[filter_type], reverse=True)
+                else:
+                    result.sort(key=lambda li:li[filter_type])
+
+            for item in result[1:]:
+                ret = self.delete(item['id'])
+                if ret != LanZouCloud.SUCCESS:
+                    return ret
 
         return LanZouCloud.SUCCESS
